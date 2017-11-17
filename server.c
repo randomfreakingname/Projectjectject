@@ -1,3 +1,4 @@
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -32,13 +33,14 @@ typedef struct{
 
 void sig_chld(int singno);
 command convertRequestToCommand(char *request);
-void processCommand(command cmd);
+char* processCommand(command cmd);
+int isUserExisted(char* username);
 
 int main(){
-	
+
 	conn=mysql_init(NULL);
-	
-	
+
+
 	if (!(mysql_real_connect(conn,host,user,pass,dbname,port,unix_socket,flag)))
 	{
 		printf("\nError: %s [%d]\n",mysql_error(conn), mysql_errno(conn));
@@ -67,14 +69,15 @@ int main(){
 	}
     listen(listenSock,LISTENQ);
     clilen = sizeof(clientAddr);
-
+    char* message;
     while (1) {
         connectSock = accept (listenSock, (struct sockaddr *) &clientAddr, &clilen);
         if((pid=fork()) == 0){
 			close(listenSock);
 			while ((n = recv(connectSock, request, MAXLINE,0)) > 0)  {
  				cmd = convertRequestToCommand(request);
-				processCommand(cmd);
+				message = processCommand(cmd);
+                send(connectSock,message,MAXLINE,0);
 			}
 			close(connectSock);
 			exit(0);
@@ -112,50 +115,49 @@ command convertRequestToCommand(char *request){
 	return cmd;
 }
 
-void processCommand(command cmd){
+char* processCommand(command cmd){
 	MYSQL_RES *result;
 	MYSQL_ROW row;
+    char* message = malloc(MAXLINE*sizeof(char));
 	char query[1000];
 	if(strcmp(cmd.code,"LOGIN") == 0){
 	    int i;
 	    sprintf(query, "Select count(*),username,password FROM user WHERE username ='%s'",cmd.params[0]);
 	    if (mysql_query(conn, query)) {
 	        mysql_close(conn);
-	        return;
+	        strcpy(message,"401|Cant connect to database");
+            return message;
 	    }
 	    result = mysql_store_result(conn);
 	    if(result == NULL) {
 	        mysql_close(conn);
-	        return;
+            strcpy(message,"401|Cant execute query");
+            return message;
 	    }
-	    while ((row = mysql_fetch_row(result))) {
-	    	if (atoi(row[0])<1) {
-	    		
+	    row = mysql_fetch_row(result);
+	    if (atoi(row[0])<1) {
+            strcpy(message,"401|Cant find username");
+	    } else {
+	    	if (strcmp(cmd.params[1],row[2])==0)
+	    	{
+                strcpy(message,"200|");
 	    	} else {
-	    		if (strcmp(cmd.params[1],row[2])==0)
-	    		{
-	    			printf("good\n");
-	    		} else {
-	    			printf("not good\n");
-	    		}
+	    	    strcpy(message,"401|Wrong password");
 	    	}
 	    }
-	    
+        return message;
 	}
 	else if(strcmp(cmd.code,"SIGNUP") == 0){
 		if (isUserExisted(cmd.params[0])==1){
 			printf("lmao who cares haha xd\n");
-			return;
+			return NULL;
 		}
 	    sprintf(query, "insert into user(username,password) values ('%s','%s')",cmd.params[0],cmd.params[1]);
 	    if (mysql_query(conn, query)) {
 	        mysql_close(conn);
-	        return;
+	        return NULL;
 	    }
-	    
-	    
 	}
-
 }
 
 int isUserExisted(char* username) {
@@ -166,12 +168,12 @@ int isUserExisted(char* username) {
     sprintf(query, "Select count(*) FROM user WHERE username ='%s'",username);
     if (mysql_query(conn, query)) {
         mysql_close(conn);
-        return;
+        return 0;
     }
     result = mysql_store_result(conn);
     if(result == NULL) {
         mysql_close(conn);
-        return;
+        return 0;
     }
     while ((row = mysql_fetch_row(result))) {
     	if (atoi(row[0])<1) {

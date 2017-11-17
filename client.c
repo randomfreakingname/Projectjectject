@@ -8,7 +8,12 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
+
+#define MAXLINE 4096
+#define SERV_PORT 3000
+
 int sockfd;
+char serverResponse[MAXLINE];
 
 void showMenuLogin();
 void showLoginForm();
@@ -21,7 +26,7 @@ int main(){
     struct sockaddr_in serverAddr;
 
     serverAddr.sin_family = AF_INET;
-	serverAddr.sin_port = htons(3000);
+	serverAddr.sin_port = htons(SERV_PORT);
     serverAddr.sin_addr.s_addr = INADDR_ANY;
 
     if(connect(sockfd,(struct sockaddr*)&serverAddr,sizeof(serverAddr))!= 0){
@@ -58,6 +63,11 @@ void showMenuLogin(){
         switch (choice) {
             case 1:
                 showLoginForm();
+                if (recv(sockfd, serverResponse, MAXLINE, 0) == 0){
+                    perror("The server terminated prematurely");
+                    exit(4);
+                }
+                printf("%s\n", serverResponse);
                 break;
             case 2:
                 showSignupForm();
