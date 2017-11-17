@@ -24,6 +24,10 @@ static char *unix_socket= NULL;
 unsigned int flag=0;
 MYSQL *conn;
 
+typedef struct{
+  char username[30];
+  int id;
+} User;
 
 
 typedef struct{
@@ -31,22 +35,21 @@ typedef struct{
   char params[2][30];
 } command;
 
+User currentUser;
+
 void sig_chld(int singno);
 command convertRequestToCommand(char *request);
 char* processCommand(command cmd);
 int isUserExisted(char* username);
 
 int main(){
-
 	conn=mysql_init(NULL);
-
-
 	if (!(mysql_real_connect(conn,host,user,pass,dbname,port,unix_socket,flag)))
 	{
 		printf("\nError: %s [%d]\n",mysql_error(conn), mysql_errno(conn));
 		exit(1);
 	}
-
+    currentUser.id = 0; //no current user
 	printf("Connection Successful\n");
 	pid_t pid;
     int listenSock, connectSock, n;
@@ -79,6 +82,8 @@ int main(){
 				message = processCommand(cmd);
                 send(connectSock,message,MAXLINE,0);
 			}
+            currentUser.id = 0;
+            printf("%d\n",currentUser.id );
 			close(connectSock);
 			exit(0);
 		}
@@ -111,7 +116,6 @@ command convertRequestToCommand(char *request){
 			strcpy(cmd.params[i++],token);
 		}
 	}
-
 	return cmd;
 }
 
@@ -122,7 +126,7 @@ char* processCommand(command cmd){
 	char query[1000];
 	if(strcmp(cmd.code,"LOGIN") == 0){
 	    int i;
-	    sprintf(query, "Select count(*),username,password FROM user WHERE username ='%s'",cmd.params[0]);
+	    sprintf(query, "Select count(*),username,password,id FROM user WHERE username ='%s'",cmd.params[0]);
 	    if (mysql_query(conn, query)) {
 	        mysql_close(conn);
 	        strcpy(message,"401|Cant connect to database");
@@ -141,6 +145,9 @@ char* processCommand(command cmd){
 	    	if (strcmp(cmd.params[1],row[2])==0)
 	    	{
                 strcpy(message,"200|");
+                strcpy(currentUser.username,cmd.params[0]);
+                currentUser.id = atoi(row[2]);
+                printf("%s\n",currentUser.username );
 	    	} else {
 	    	    strcpy(message,"401|Wrong password");
 	    	}

@@ -8,20 +8,29 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
+typedef struct{
+  char code[20];
+  char params[2][30];
+} command;
+
 
 #define MAXLINE 4096
 #define SERV_PORT 3000
 
 int sockfd;
 char serverResponse[MAXLINE];
+command cmd;
+char username[30];
 
 void showMenuLogin();
 void showLoginForm();
 void makeLoginCommand(char*command,char *username, char *password);
 void makeSignupCommand(char*command,char *username, char *password);
 void showSignupForm();
-int main(){
+void showMenuFunction();
+command convertReponseToCommand(char *response);
 
+int main(){
     sockfd = socket(AF_INET,SOCK_STREAM,0);
     struct sockaddr_in serverAddr;
 
@@ -67,7 +76,13 @@ void showMenuLogin(){
                     perror("The server terminated prematurely");
                     exit(4);
                 }
-                printf("%s\n", serverResponse);
+                cmd = convertReponseToCommand(serverResponse);
+                if (atoi(cmd.code) == 200) {
+                    showMenuFunction();
+                }
+                else {
+                    printf("%s\n",cmd.params[0]);
+                }
                 break;
             case 2:
                 showSignupForm();
@@ -79,7 +94,6 @@ void showMenuLogin(){
 }
 
 void showLoginForm(){
-    char username[30];
     char password[30];
     char command[100];
     printf("Username:\n");
@@ -100,7 +114,6 @@ void makeLoginCommand(char *command, char *username, char *password){
 
 
 void showSignupForm(){
-    char username[30];
     char password[30];
     char command[100];
     printf("Username:\n");
@@ -117,4 +130,70 @@ void makeSignupCommand(char *command, char *username, char *password){
     strcat(command,"|");
     strcat(command,password);
     strcat(command,"|");
+}
+
+command convertReponseToCommand(char *response){
+	char copy[100];
+	strcpy(copy,response);
+	command cmd;
+	char *token;
+	int i = 0;
+	token = strtok(copy, "|");
+	strcpy(cmd.code, token);
+	while(token != NULL){
+		token = strtok(NULL, "|");
+		if(token != NULL){
+			strcpy(cmd.params[i++],token);
+		}
+	}
+	return cmd;
+}
+
+
+void showMenuFunction(){
+    int choice;
+    char c;
+    while (1){
+        choice = 0;
+        printf("Hello %s\n", username);
+        printf("Here is your function:\n");
+        printf("1.Create new folder\n");
+        printf("2.See your folder\n");
+        printf("3.Upload file\n");
+        printf("4.Delete file\n");
+        printf("5.Logout\n");
+        printf("Your choice:");
+        while (choice == 0) {
+            if(scanf("%d",&choice) < 1){
+                choice = 0;
+            }
+            if(choice < 1 || choice > 5){
+                choice = 0;
+                printf("Invalid choice!\n");
+                printf("Enter again:");
+            }
+            while((c = getchar())!='\n');
+        }
+
+        switch (choice) {
+            case 1:
+                printf("code for create new folder here\n");
+                break;
+            case 2:
+                printf("code for see folder here\n");
+                break;
+            case 3:
+                printf("code for upfile here\n");
+                break;
+            case 4:
+                printf("code for delete file here\n");
+                break;
+            case 5:
+                printf("code for logout here\n");
+                break;
+        }
+        if (choice == 5){
+            break;
+        }
+    }
 }
