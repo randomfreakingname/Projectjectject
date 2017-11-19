@@ -48,6 +48,14 @@ char* processCommand(command cmd);
 int isUserExisted(char* username);
 command cmd;
 
+int getFileSize(FILE *f){
+        int size;
+        fseek(f, 0L, SEEK_END);
+        size=ftell(f);
+        fseek(f, 0L, SEEK_SET);
+        return size;
+}
+
 int main(){
         conn=mysql_init(NULL);
         if (!(mysql_real_connect(conn,host,user,pass,dbname,port,unix_socket,flag)))
@@ -66,6 +74,10 @@ int main(){
         serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
         serverAddr.sin_port = htons(SERV_PORT);
 
+        int enable = 1;
+        if (setsockopt(listenSock, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
+                perror("setsockopt(SO_REUSEADDR) failed");
+
         if(bind(listenSock,(struct sockaddr *)&serverAddr, sizeof(serverAddr)) < 0) {
                 printf("Loi bind\n");
                 exit(2);
@@ -80,10 +92,13 @@ int main(){
                         while ((n = recv(connectSock, request, MAXLINE,0)) > 0)  {
                                 cmd = convertRequestToCommand(request);
                                 message = processCommand(cmd);
-                                send(connectSock,message,MAXLINE,0);
+                                if (message != NULL) {
+                                        send(connectSock, message, MAXLINE, 0);
+                                }
+                                printf("Processed command\n");
                         }
                         currentUser.id = 0;
-                        printf("%d\n",currentUser.id );
+                        printf("%d\n", currentUser.id );
                         close(connectSock);
                         exit(0);
                 }
@@ -147,7 +162,7 @@ char* processCommand(command cmd){
                                 strcpy(message,"200|");
                                 strcpy(currentUser.username,cmd.params[0]);
                                 currentUser.id = atoi(row[2]);
-                                printf("%s\n",currentUser.username );
+                                printf("User %s logged in\n", currentUser.username );
                         } else {
                                 strcpy(message,"401|Wrong password");
                         }
@@ -165,20 +180,76 @@ char* processCommand(command cmd){
                         return NULL;
                 }
         }else if (strcmp(cmd.code, "UPLOAD") == 0) {
-                printf("%s\n","Uploading file to server");
+                printf("UPLOAD request from user %s\n", currentUser.username);
+                int fileSize;
+                int received;
+                int totalReceived = 0;
+                char buf[MAXLINE];
+                printf("Filename: %s\n", cmd.params[0]);
+                recv(connectSock, buf, MAXLINE, 0);
+                fileSize = atoi(buf);
+                printf("File size: %d byte(s)\n", fileSize);
                 FILE* fptr = fopen(cmd.params[0], "wb");
-                if ((n = recv(connfd, buf, MAXLINE,0)) > 0)  {
-                        printf("Filename received from the client: %s\n", buf);
-                        fptr = fopen(buf, "wb");
-                        while() {
-                                fwrite(buf, n, 1, fptr);
-                                send(connfd, buf, n, 0);
+                bzero(buf, sizeof(buf));
+                send(connectSock, "READY", MAXLINE, 0);
+                printf("Server ready to download\n");
+                while(totalReceived < fileSize) {
+                        received = recv(connectSock, buf, MAXLINE, 0);
+                        totalReceived += received;
+                        printf("Received: %d byte(s)\tTotal: %d byte(s)\tRemaining: %d byte(s)\n", received, totalReceived, fileSize - totalReceived);
+                        if(received <= 0) {
+                                printf("Lost connection to client\n");
+                                break;
                         }
-                        printf("File transfering successful\n");
-                        fclose(fptr);
-                        break;
+                        fwrite(buf, 1, received, fptr);
+                        bzero(buf, sizeof(buf));
+                        send(connectSock, "READY", MAXLINE, 0);
                 }
-                close(connfd);
+                fclose(fptr);
+                printf("File downloading successful\n");
+                bzero(cmd.code, sizeof(cmd.code));
+                bzero(cmd.params[0], sizeof(cmd.params[0]));
+                bzero(cmd.params[1], sizeof(cmd.params[1]));
+                return NULL;
+        }else if (strcmp(cmd.code, "DOWNLOAD") == 0) {
+                printf("DOWNLOAD request from user %s\n", currentUser.username);
+                char fileSizeStr[12];
+                char buf[MAXLINE];
+                int totalSent = 0;
+                int sent;
+                int read;
+                FILE *fptr;
+                printf("Filename: %s\n", cmd.params[0]);
+                fptr = fopen(cmd.params[0], "rb");
+                if (fptr == NULL) {
+                        perror("Can't open file");
+                        exit(0);
+                }
+                int fileSizeNo = getFileSize(fptr);
+                sprintf(fileSizeStr, "%d", fileSizeNo);
+                printf("File size : %d byte(s)\n", fileSizeNo);
+                send(connectSock, fileSizeStr, strlen(fileSizeStr), 0);
+                while(strcmp(buf, "READY") != 0) {
+                        recv(connectSock, buf, MAXLINE, 0);
+                }
+                printf("Client is ready. Begin uploading...\n");
+                while(totalSent < fileSizeNo) {
+                        read = fread(buf, 1, MAXLINE, fptr);
+                        sent = send(connectSock, buf, read, 0);
+                        totalSent += sent;
+                        printf("Sent: %d byte(s)\tTotal: %d byte(s)\tRemaining: %d\n", sent, totalSent, fileSizeNo - totalSent);
+                        bzero(buf, sizeof(buf));
+                        while(strcmp(buf, "READY") != 0) {
+                                recv(connectSock, buf, MAXLINE, 0);
+                        }
+                        bzero(buf, sizeof(buf));
+                }
+                fclose(fptr);
+                printf("File uploading successful\n");
+                bzero(cmd.code, sizeof(cmd.code));
+                bzero(cmd.params[0], sizeof(cmd.params[0]));
+                bzero(cmd.params[1], sizeof(cmd.params[1]));
+                return NULL;
         }
 }
 
