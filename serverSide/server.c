@@ -47,9 +47,13 @@ void sig_chld(int singno);
 command convertRequestToCommand(char *request);
 char* processCommand(command cmd);
 int isUserExisted(char* username);
-void makeNewFolder(char * folderName);
+int makeNewFolder(char * folderName);
 void resetCurrentUser();
 char* showContentFolder(char *folderPath);
+int deleteFolder(char *folderName);
+int operateFolder(char *folderName, char *operation);
+char *updatePath();
+void backFolder(char *path);
 command cmd;
 
 int getFileSize(FILE *f){
@@ -68,7 +72,6 @@ int main(){
                 exit(1);
         }
         currentUser.id = 0; //no current user
-        printf("Connection Successful\n");
 
         if((listenSock = socket(AF_INET,SOCK_STREAM,0)) < 0) {
                 printf("Loi tao socket\n");
@@ -99,8 +102,6 @@ int main(){
                                 if (message != NULL) {
                                         send(connectSock, message, MAXLINE, 0);
                                 }
-                                printf("Processed command\n");
-                                send(connectSock,message,MAXLINE,0);
                         }
                         resetCurrentUser();
                         close(connectSock);
@@ -143,6 +144,7 @@ char* processCommand(command cmd){
         MYSQL_ROW row;
         char* message = malloc(MAXLINE*sizeof(char));
         char query[1000];
+        char temp[100];
         if(strcmp(cmd.code,"LOGIN") == 0) {
                 int i;
                 sprintf(query, "Select count(*),username,password,id FROM user WHERE username ='%s'",cmd.params[0]);
@@ -166,12 +168,10 @@ char* processCommand(command cmd){
                                 strcpy(message,"201|");
                                 strcpy(currentUser.username,cmd.params[0]);
                                 currentUser.id = atoi(row[2]);
-                                printf("User %s logged in\n", currentUser.username );
                                 char temp[256] = "folder/";
                                 strcat(temp,currentUser.username);
                                 strcat(message,temp);
                                 strcat(message,"|");
-                                printf("%s\n",temp );
                                 strcat(message,showContentFolder(temp));
                                 strcat(message,"|");
                         } else {
@@ -185,7 +185,6 @@ char* processCommand(command cmd){
                         strcpy(message,"401|username is already existed");
                         return message;
                 }
-                printf("%s %s\n",cmd.params[0],cmd.params[1]);
                 sprintf(query, "insert into user(username,password) values ('%s','%s')",cmd.params[0],cmd.params[1]);
                 if (mysql_query(conn, query)) {
                         mysql_close(conn);
@@ -198,7 +197,6 @@ char* processCommand(command cmd){
                 makeNewFolder(temp);
                 return message;
         }else if (strcmp(cmd.code, "UPLOAD") == 0) {
-                printf("UPLOAD request from user %s\n", currentUser.username);
                 int fileSize;
                 int received;
                 int totalReceived = 0;
@@ -268,7 +266,56 @@ char* processCommand(command cmd){
                 bzero(cmd.params[0], sizeof(cmd.params[0]));
                 bzero(cmd.params[1], sizeof(cmd.params[1]));
                 return NULL;
+        }else if (strcmp(cmd.code, "MAKEFOLDER") == 0){
+                strcpy(temp, cmd.params[1]);
+                strcat(temp,"/");
+                strcat(temp, cmd.params[0]);
+                if( makeNewFolder(temp) == 1){
+                        strcpy(message,"201|");
+                        strcat(message,showContentFolder(cmd.params[1]));
+                        strcat(message,"|");
+                }else{
+                        strcpy(message,"401|Invalid folder name");
+                }
+                return message;
+        }else if (strcmp(cmd.code, "DELETEFOLDER") == 0){
+                strcpy(temp, cmd.params[1]);
+                strcat(temp,"/");
+                strcat(temp, cmd.params[0]);
+                if( deleteFolder(temp) == 1){
+                        strcpy(message,"201|");
+                        strcat(message,showContentFolder(cmd.params[1]));
+                        strcat(message,"|");
+                }else{
+                        strcpy(message,"401|Not a folder");
+                }
+                return message;
+        }else if (strcmp(cmd.code, "ENTERFOLDER") == 0){
+                strcpy(temp, cmd.params[1]);
+                strcat(temp,"/");
+                strcat(temp, cmd.params[0]);
+                if( operateFolder(temp,"cd") == 1){
+                        strcpy(message,"201|");
+                        char *newPath = updatePath();
+                        strcat(message,newPath);
+                        strcat(message,"|");
+                        strcat(message,showContentFolder(newPath));
+                        strcat(message,"|");
+                }else{
+                        strcpy(message,"401|Not a folder");
+                }
+                return message;
         }
+        else if (strcmp(cmd.code, "BACKFOLDER") == 0){
+                backFolder(cmd.params[1]);
+                strcpy(message,"201|");
+                strcat(message,cmd.params[1]);
+                strcat(message,"|");
+                strcat(message,showContentFolder(cmd.params[1]));
+                strcat(message,"|");
+                return message;
+        }
+
 }
 
 int isUserExisted(char* username) {
@@ -296,11 +343,15 @@ int isUserExisted(char* username) {
 }
 
 
-void makeNewFolder(char * folderName){
+int makeNewFolder(char * folderName){
     char command[256];
     sprintf(command,"mkdir %s",folderName);
-    system(command);
+    if(system(command) == 0 ){
+            return 1;
+    }
+    return 0;
 }
+
 
 void resetCurrentUser(){
     currentUser.id = 0;
@@ -318,12 +369,52 @@ char* showContentFolder(char *folderPath){
     if (d){
         while ((dir = readdir(d)) != NULL){
         if (dir->d_name[0] != '.'){
-                printf("%s\n", content);
                 strcat(content,dir->d_name);
                 strcat(content,",");
             }
         }
         closedir(d);
     }
+    int x = (int)strlen(content);
+    if (x == 0){
+        strcpy(content,"empty");
+    }
     return content;
+}
+
+int deleteFolder(char *folderName){
+        char command[256];
+        sprintf(command,"rmdir %s",folderName);
+        if(system(command) == 0 ){
+                return 1;
+        }
+        return 0;
+}
+
+int operateFolder(char *folderName, char *operation){
+        char command[256];
+        sprintf(command,"%s %s",operation, folderName);
+        if(system(command) == 0 ){
+                return 1;
+        }
+        return 0;
+}
+
+char *updatePath(){
+        char *path = malloc (sizeof (char) * 256);
+        strcpy(path,cmd.params[1]);
+        strcat(path,"/");
+        strcat(path,cmd.params[0]);
+        return path;
+}
+
+void backFolder(char *path){
+        int i = strlen(path);
+        while(1){
+                if(path[i] == '/'){
+                        path[i] = '\0';
+                        break;
+                }
+                i--;
+        }
 }
