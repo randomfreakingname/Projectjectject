@@ -173,7 +173,7 @@ void showMenuFunction(){
                 if(strcmp(currentContent,"empty") == 0){
                         printf("This folder is empty\n");
                 }
-                else{        
+                else{
                         printf("Your content in this folder: %s\n",currentContent);
                 }
                 printf("What do you want to do:\n");
@@ -183,13 +183,14 @@ void showMenuFunction(){
                 printf("4. Download file\n");
                 printf("5. Delete file\n");
                 printf("6. Delete folder\n");
-                printf("7. Logout\n");
+                printf("7. Back\n");
+                printf("8. Logout\n");
                 printf("Your choice: ");
                 while (choice == 0) {
                         if(scanf("%d",&choice) < 1) {
                                 choice = 0;
                         }
-                        if(choice < 1 || choice > 7) {
+                        if(choice < 1 || choice > 8) {
                                 choice = 0;
                                 printf("Invalid choice!\n");
                                 printf("Enter again:");
@@ -315,11 +316,17 @@ void showMenuFunction(){
                         }
                         break;
                 case 7:
+                        makeFolderForm("BACKFOLDER");
+                        getResponse();
+                        strcpy(currentContent,cmd.params[1]);
+                        strcpy(currentPath, cmd.params[0]);
+                        break;
+                case 8:
                         printf("Bye\n");
                         break;
                 }
 
-                if (choice == 7) {
+                if (choice == 8) {
                         break;
                 }
         }
@@ -336,6 +343,11 @@ void getResponse(){
 void makeFolderForm(char *messageHeader){
     char folderName[100];
     char command[100];
+    if(strcmp(messageHeader,"BACKFOLDER")==0){
+            makeCommand(command,messageHeader, " ", currentPath);
+            send (sockfd,command,sizeof(command),0);
+            return;
+    }
     printf("Enter folder name:\n");
     gets(folderName);
     makeCommand(command,messageHeader, folderName, currentPath);

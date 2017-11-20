@@ -53,6 +53,7 @@ char* showContentFolder(char *folderPath);
 int deleteFolder(char *folderName);
 int operateFolder(char *folderName, char *operation);
 char *updatePath();
+void backFolder(char *path);
 command cmd;
 
 int getFileSize(FILE *f){
@@ -305,6 +306,15 @@ char* processCommand(command cmd){
                 }
                 return message;
         }
+        else if (strcmp(cmd.code, "BACKFOLDER") == 0){
+                backFolder(cmd.params[1]);
+                strcpy(message,"201|");
+                strcat(message,cmd.params[1]);
+                strcat(message,"|");
+                strcat(message,showContentFolder(cmd.params[1]));
+                strcat(message,"|");
+                return message;
+        }
 
 }
 
@@ -365,12 +375,10 @@ char* showContentFolder(char *folderPath){
         }
         closedir(d);
     }
-    printf("%s %d\n",content, (int)strlen(content) );
     int x = (int)strlen(content);
     if (x == 0){
         strcpy(content,"empty");
     }
-     printf("%s %d\n",content, (int)strlen(content) );
     return content;
 }
 
@@ -398,4 +406,15 @@ char *updatePath(){
         strcat(path,"/");
         strcat(path,cmd.params[0]);
         return path;
+}
+
+void backFolder(char *path){
+        int i = strlen(path);
+        while(1){
+                if(path[i] == '/'){
+                        path[i] = '\0';
+                        break;
+                }
+                i--;
+        }
 }
