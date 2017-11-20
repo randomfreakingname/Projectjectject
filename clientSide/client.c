@@ -26,9 +26,9 @@ char currentContent[256];
 
 void showMenuLogin();
 void showLoginForm();
-void makeLoginCommand(char*command, char *username, char *password);
-void makeSignupCommand(char*command, char *username, char *password);
+
 void makeCommand(char* command, char* code, char* param1, char* param2);
+
 void showSignupForm();
 void showMenuFunction();
 void getResponse();
@@ -291,9 +291,9 @@ void showMenuFunction(){
 }
 
 void getResponse(){
-        if (recv(sockfd, serverResponse, MAXLINE, 0) == 0) {
-                perror("The server terminated prematurely");
-                exit(4);
-        }
-        cmd = convertReponseToCommand(serverResponse);
+    if (recv(sockfd, serverResponse, MAXLINE, 0) == 0) {
+            perror("The server terminated prematurely");
+            exit(4);
+    }
+    cmd = convertReponseToCommand(serverResponse);
 }

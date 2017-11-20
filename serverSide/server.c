@@ -100,6 +100,7 @@ int main(){
                                         send(connectSock, message, MAXLINE, 0);
                                 }
                                 printf("Processed command\n");
+                                send(connectSock,message,MAXLINE,0);
                         }
                         resetCurrentUser();
                         close(connectSock);
@@ -185,8 +186,7 @@ char* processCommand(command cmd){
                         return message;
                 }
                 printf("%s %s\n",cmd.params[0],cmd.params[1]);
-                sprintf(query, "insert into user(username,password) values ('%s','%s')",
-                        cmd.params[0],cmd.params[1]);
+                sprintf(query, "insert into user(username,password) values ('%s','%s')",cmd.params[0],cmd.params[1]);
                 if (mysql_query(conn, query)) {
                         mysql_close(conn);
                         strcpy(message,"401|Cant connect to database");
@@ -297,33 +297,33 @@ int isUserExisted(char* username) {
 
 
 void makeNewFolder(char * folderName){
-        char command[256];
-        sprintf(command,"mkdir %s",folderName);
-        system(command);
+    char command[256];
+    sprintf(command,"mkdir %s",folderName);
+    system(command);
 }
 
 void resetCurrentUser(){
-        currentUser.id = 0;
-        strcpy(currentUser.username,"");
-        strcpy(currentUser.username,"");
+    currentUser.id = 0;
+    strcpy(currentUser.username,"");
+    strcpy(currentUser.username,"");
 }
 
 char* showContentFolder(char *folderPath){
-        char *content = malloc(sizeof(char)*256);
-        strcpy(content,"");
-        char temp[200];
-        DIR  *d;
-        struct dirent *dir;
-        d = opendir(folderPath);
-        if (d) {
-                while ((dir = readdir(d)) != NULL) {
-                        if (dir->d_name[0] != '.') {
-                                printf("%s\n", content);
-                                strcat(content,dir->d_name);
-                                strcat(content,",");
-                        }
-                }
-                closedir(d);
+    char *content = malloc(sizeof(char)*256);
+    strcpy(content,"");
+    char temp[200];
+    DIR  *d;
+    struct dirent *dir;
+    d = opendir(folderPath);
+    if (d){
+        while ((dir = readdir(d)) != NULL){
+        if (dir->d_name[0] != '.'){
+                printf("%s\n", content);
+                strcat(content,dir->d_name);
+                strcat(content,",");
+            }
         }
-        return content;
+        closedir(d);
+    }
+    return content;
 }
