@@ -28,7 +28,7 @@ void showMenuLogin();
 void showLoginForm();
 
 void makeCommand(char* command, char* code, char* param1, char* param2);
-
+void makeFolderForm(char *messageHeader);
 void showSignupForm();
 void showMenuFunction();
 void getResponse();
@@ -170,20 +170,26 @@ void showMenuFunction(){
                 choice = 0;
                 printf("Hello, %s\n", username);
                 printf("Your current folder: %s\n",currentPath);
-                printf("Your content in this folder: %s\n",currentContent);
+                if(strcmp(currentContent,"empty") == 0){
+                        printf("This folder is empty\n");
+                }
+                else{        
+                        printf("Your content in this folder: %s\n",currentContent);
+                }
                 printf("What do you want to do:\n");
                 printf("1. Create new folder\n");
-                printf("2. See your folder\n");
+                printf("2. Enter folder\n");
                 printf("3. Upload file\n");
                 printf("4. Download file\n");
                 printf("5. Delete file\n");
-                printf("6. Logout\n");
+                printf("6. Delete folder\n");
+                printf("7. Logout\n");
                 printf("Your choice: ");
                 while (choice == 0) {
                         if(scanf("%d",&choice) < 1) {
                                 choice = 0;
                         }
-                        if(choice < 1 || choice > 6) {
+                        if(choice < 1 || choice > 7) {
                                 choice = 0;
                                 printf("Invalid choice!\n");
                                 printf("Enter again:");
@@ -193,10 +199,27 @@ void showMenuFunction(){
 
                 switch (choice) {
                 case 1:
-                        printf("code for create new folder here\n");
+                        makeFolderForm("MAKEFOLDER");
+                        getResponse();
+                        if (atoi(cmd.code) == 201) {
+                                printf("Create folder successfully\n");
+                                strcpy(currentContent,cmd.params[0]);
+                        }
+                        else {
+                                printf("Error :%s\n",cmd.params[0]);
+                        }
                         break;
                 case 2:
-                        printf("code for see folder here\n");
+                        makeFolderForm("ENTERFOLDER");
+                        getResponse();
+                        if (atoi(cmd.code) == 201) {
+                                printf("Enter folder successfully\n");
+                                strcpy(currentContent,cmd.params[1]);
+                                strcpy(currentPath, cmd.params[0]);
+                        }
+                        else {
+                                printf("Error :%s\n",cmd.params[0]);
+                        }
                         break;
                 case 3: {
                         char fileName[20];
@@ -281,10 +304,22 @@ void showMenuFunction(){
                         printf("code for delete file here\n");
                         break;
                 case 6:
-                        printf("code for logout here\n");
+                        makeFolderForm("DELETEFOLDER");
+                        getResponse();
+                        if (atoi(cmd.code) == 201) {
+                                printf("Delele folder successfully\n");
+                                strcpy(currentContent,cmd.params[0]);
+                        }
+                        else {
+                                printf("Error :%s\n",cmd.params[0]);
+                        }
+                        break;
+                case 7:
+                        printf("Bye\n");
                         break;
                 }
-                if (choice == 6) {
+
+                if (choice == 7) {
                         break;
                 }
         }
@@ -296,4 +331,13 @@ void getResponse(){
             exit(4);
     }
     cmd = convertReponseToCommand(serverResponse);
+}
+
+void makeFolderForm(char *messageHeader){
+    char folderName[100];
+    char command[100];
+    printf("Enter folder name:\n");
+    gets(folderName);
+    makeCommand(command,messageHeader, folderName, currentPath);
+    send (sockfd,command,sizeof(command),0);
 }
