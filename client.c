@@ -21,6 +21,8 @@ int sockfd;
 char serverResponse[MAXLINE];
 command cmd;
 char username[30];
+char currentPath[256];
+char currentContent[256];
 
 void showMenuLogin();
 void showLoginForm();
@@ -29,6 +31,7 @@ void makeSignupCommand(char*command,char *username, char *password);
 void makeCommand(char* command, char* code, char* param1, char* param2);
 void showSignupForm();
 void showMenuFunction();
+void getResponse();
 command convertReponseToCommand(char *response);
 
 int main(){
@@ -73,12 +76,10 @@ void showMenuLogin(){
                 switch (choice) {
                 case 1:
                         showLoginForm();
-                        if (recv(sockfd, serverResponse, MAXLINE, 0) == 0) {
-                                perror("The server terminated prematurely");
-                                exit(4);
-                        }
-                        cmd = convertReponseToCommand(serverResponse);
-                        if (atoi(cmd.code) == 200) {
+                        getResponse();
+                        if (atoi(cmd.code) == 201) {
+                                strcpy(currentPath,cmd.params[0]);
+                                strcpy(currentContent,cmd.params[1]);
                                 showMenuFunction();
                         }
                         else {
@@ -87,6 +88,13 @@ void showMenuLogin(){
                         break;
                 case 2:
                         showSignupForm();
+                        getResponse();
+                        if (atoi(cmd.code) == 200) {
+                                printf("Sign up successfully\n");
+                        }
+                        else {
+                                printf("%s\n",cmd.params[0]);
+                        }
                         break;
                 default:
                         exit(0);
@@ -170,9 +178,11 @@ void showMenuFunction(){
         while (1) {
                 choice = 0;
                 printf("Hello %s\n", username);
+                printf("Your current folder:%s\n",currentPath);
+                printf("Your content in this folder: %s\n",currentContent);
                 printf("Here is your function:\n");
                 printf("1.Create new folder\n");
-                printf("2.See your folder\n");
+                printf("2.Enter folder\n");
                 printf("3.Upload file\n");
                 printf("4.Delete file\n");
                 printf("5.Logout\n");
@@ -212,4 +222,12 @@ void showMenuFunction(){
                         break;
                 }
         }
+}
+
+void getResponse(){
+    if (recv(sockfd, serverResponse, MAXLINE, 0) == 0) {
+            perror("The server terminated prematurely");
+            exit(4);
+    }
+    cmd = convertReponseToCommand(serverResponse);
 }
