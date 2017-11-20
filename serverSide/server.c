@@ -1,4 +1,4 @@
-
+#include <dirent.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -32,6 +32,7 @@ socklen_t clilen;
 typedef struct {
         char username[30];
         int id;
+        char path[256];
 } User;
 
 
@@ -46,6 +47,9 @@ void sig_chld(int singno);
 command convertRequestToCommand(char *request);
 char* processCommand(command cmd);
 int isUserExisted(char* username);
+void makeNewFolder(char * folderName);
+void resetCurrentUser();
+char* showContentFolder(char *folderPath);
 command cmd;
 
 int getFileSize(FILE *f){
@@ -97,8 +101,7 @@ int main(){
                                 }
                                 printf("Processed command\n");
                         }
-                        currentUser.id = 0;
-                        printf("%d\n", currentUser.id );
+                        resetCurrentUser();
                         close(connectSock);
                         exit(0);
                 }
@@ -159,10 +162,17 @@ char* processCommand(command cmd){
                 } else {
                         if (strcmp(cmd.params[1],row[2])==0)
                         {
-                                strcpy(message,"200|");
+                                strcpy(message,"201|");
                                 strcpy(currentUser.username,cmd.params[0]);
                                 currentUser.id = atoi(row[2]);
                                 printf("User %s logged in\n", currentUser.username );
+                                char temp[256] = "folder/";
+                                strcat(temp,currentUser.username);
+                                strcat(message,temp);
+                                strcat(message,"|");
+                                printf("%s\n",temp );
+                                strcat(message,showContentFolder(temp));
+                                strcat(message,"|");
                         } else {
                                 strcpy(message,"401|Wrong password");
                         }
@@ -171,14 +181,22 @@ char* processCommand(command cmd){
         }
         else if(strcmp(cmd.code,"SIGNUP") == 0) {
                 if (isUserExisted(cmd.params[0])==1) {
-                        printf("lmao who cares haha xd\n");
-                        return NULL;
+                        strcpy(message,"401|username is already existed");
+                        return message;
                 }
-                sprintf(query, "insert into user(username,password) values ('%s','%s')",cmd.params[0],cmd.params[1]);
+                printf("%s %s\n",cmd.params[0],cmd.params[1]);
+                sprintf(query, "insert into user(username,password) values ('%s','%s')",
+                        cmd.params[0],cmd.params[1]);
                 if (mysql_query(conn, query)) {
                         mysql_close(conn);
-                        return NULL;
+                        strcpy(message,"401|Cant connect to database");
+                        return message;
                 }
+                strcpy(message,"200|");
+                char temp[100] = "folder/";
+                strcat(temp,cmd.params[0]);
+                makeNewFolder(temp);
+                return message;
         }else if (strcmp(cmd.code, "UPLOAD") == 0) {
                 printf("UPLOAD request from user %s\n", currentUser.username);
                 int fileSize;
@@ -275,4 +293,37 @@ int isUserExisted(char* username) {
                         return 1;
                 }
         }
+}
+
+
+void makeNewFolder(char * folderName){
+        char command[256];
+        sprintf(command,"mkdir %s",folderName);
+        system(command);
+}
+
+void resetCurrentUser(){
+        currentUser.id = 0;
+        strcpy(currentUser.username,"");
+        strcpy(currentUser.username,"");
+}
+
+char* showContentFolder(char *folderPath){
+        char *content = malloc(sizeof(char)*256);
+        strcpy(content,"");
+        char temp[200];
+        DIR  *d;
+        struct dirent *dir;
+        d = opendir(folderPath);
+        if (d) {
+                while ((dir = readdir(d)) != NULL) {
+                        if (dir->d_name[0] != '.') {
+                                printf("%s\n", content);
+                                strcat(content,dir->d_name);
+                                strcat(content,",");
+                        }
+                }
+                closedir(d);
+        }
+        return content;
 }
