@@ -206,6 +206,10 @@ char* processCommand(command cmd){
                 fileSize = atoi(buf);
                 printf("File size: %d byte(s)\n", fileSize);
                 FILE* fptr = fopen(cmd.params[0], "wb");
+                if (fptr == NULL) {
+                        perror("Can't write file");
+                        return message;
+                }
                 bzero(buf, sizeof(buf));
                 send(connectSock, "READY", MAXLINE, 0);
                 printf("Server ready to download\n");
@@ -266,11 +270,11 @@ char* processCommand(command cmd){
                 bzero(cmd.params[0], sizeof(cmd.params[0]));
                 bzero(cmd.params[1], sizeof(cmd.params[1]));
                 return NULL;
-        }else if (strcmp(cmd.code, "MAKEFOLDER") == 0){
+        }else if (strcmp(cmd.code, "MAKEFOLDER") == 0) {
                 strcpy(temp, cmd.params[1]);
                 strcat(temp,"/");
                 strcat(temp, cmd.params[0]);
-                if( makeNewFolder(temp) == 1){
+                if( makeNewFolder(temp) == 1) {
                         strcpy(message,"201|");
                         strcat(message,showContentFolder(cmd.params[1]));
                         strcat(message,"|");
@@ -278,11 +282,11 @@ char* processCommand(command cmd){
                         strcpy(message,"401|Invalid folder name");
                 }
                 return message;
-        }else if (strcmp(cmd.code, "DELETEFOLDER") == 0){
+        }else if (strcmp(cmd.code, "DELETEFOLDER") == 0) {
                 strcpy(temp, cmd.params[1]);
                 strcat(temp,"/");
                 strcat(temp, cmd.params[0]);
-                if( deleteFolder(temp) == 1){
+                if( deleteFolder(temp) == 1) {
                         strcpy(message,"201|");
                         strcat(message,showContentFolder(cmd.params[1]));
                         strcat(message,"|");
@@ -290,11 +294,11 @@ char* processCommand(command cmd){
                         strcpy(message,"401|Not a folder");
                 }
                 return message;
-        }else if (strcmp(cmd.code, "ENTERFOLDER") == 0){
+        }else if (strcmp(cmd.code, "ENTERFOLDER") == 0) {
                 strcpy(temp, cmd.params[1]);
                 strcat(temp,"/");
                 strcat(temp, cmd.params[0]);
-                if( operateFolder(temp,"cd") == 1){
+                if( operateFolder(temp,"cd") == 1) {
                         strcpy(message,"201|");
                         char *newPath = updatePath();
                         strcat(message,newPath);
@@ -306,7 +310,7 @@ char* processCommand(command cmd){
                 }
                 return message;
         }
-        else if (strcmp(cmd.code, "BACKFOLDER") == 0){
+        else if (strcmp(cmd.code, "BACKFOLDER") == 0) {
                 backFolder(cmd.params[1]);
                 strcpy(message,"201|");
                 strcat(message,cmd.params[1]);
@@ -344,48 +348,48 @@ int isUserExisted(char* username) {
 
 
 int makeNewFolder(char * folderName){
-    char command[256];
-    sprintf(command,"mkdir %s",folderName);
-    if(system(command) == 0 ){
-            return 1;
-    }
-    return 0;
+        char command[256];
+        sprintf(command,"mkdir %s",folderName);
+        if(system(command) == 0 ) {
+                return 1;
+        }
+        return 0;
 }
 
 
 void resetCurrentUser(){
-    currentUser.id = 0;
-    strcpy(currentUser.username,"");
-    strcpy(currentUser.username,"");
+        currentUser.id = 0;
+        strcpy(currentUser.username,"");
+        strcpy(currentUser.username,"");
 }
 
 char* showContentFolder(char *folderPath){
-    char *content = malloc(sizeof(char)*256);
-    strcpy(content,"");
-    char temp[200];
-    DIR  *d;
-    struct dirent *dir;
-    d = opendir(folderPath);
-    if (d){
-        while ((dir = readdir(d)) != NULL){
-        if (dir->d_name[0] != '.'){
-                strcat(content,dir->d_name);
-                strcat(content,",");
-            }
+        char *content = malloc(sizeof(char)*256);
+        strcpy(content,"");
+        char temp[200];
+        DIR  *d;
+        struct dirent *dir;
+        d = opendir(folderPath);
+        if (d) {
+                while ((dir = readdir(d)) != NULL) {
+                        if (dir->d_name[0] != '.') {
+                                strcat(content,dir->d_name);
+                                strcat(content,",");
+                        }
+                }
+                closedir(d);
         }
-        closedir(d);
-    }
-    int x = (int)strlen(content);
-    if (x == 0){
-        strcpy(content,"empty");
-    }
-    return content;
+        int x = (int)strlen(content);
+        if (x == 0) {
+                strcpy(content,"empty");
+        }
+        return content;
 }
 
 int deleteFolder(char *folderName){
         char command[256];
         sprintf(command,"rmdir %s",folderName);
-        if(system(command) == 0 ){
+        if(system(command) == 0 ) {
                 return 1;
         }
         return 0;
@@ -394,7 +398,7 @@ int deleteFolder(char *folderName){
 int operateFolder(char *folderName, char *operation){
         char command[256];
         sprintf(command,"%s %s",operation, folderName);
-        if(system(command) == 0 ){
+        if(system(command) == 0 ) {
                 return 1;
         }
         return 0;
@@ -410,8 +414,8 @@ char *updatePath(){
 
 void backFolder(char *path){
         int i = strlen(path);
-        while(1){
-                if(path[i] == '/'){
+        while(1) {
+                if(path[i] == '/') {
                         path[i] = '\0';
                         break;
                 }

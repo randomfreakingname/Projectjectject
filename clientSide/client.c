@@ -168,9 +168,10 @@ void showMenuFunction(){
         char c;
         while (1) {
                 choice = 0;
+                printf("\n\n");
                 printf("Hello, %s\n", username);
                 printf("Your current folder: %s\n",currentPath);
-                if(strcmp(currentContent,"empty") == 0){
+                if(strcmp(currentContent,"empty") == 0) {
                         printf("This folder is empty\n");
                 }
                 else{
@@ -227,6 +228,7 @@ void showMenuFunction(){
                         char fileSizeStr[12];
                         char buf[MAXLINE];
                         char command[100];
+                        char path[256];
                         int totalSent = 0;
                         int sent;
                         int read;
@@ -237,9 +239,10 @@ void showMenuFunction(){
                         fptr = fopen(fileName, "rb");
                         if (fptr == NULL) {
                                 perror("Can't open file");
-                                exit(0);
+                                break;
                         }
-                        makeCommand(command, "UPLOAD", fileName, NULL);
+                        snprintf(path, sizeof(path), "%s/%s", currentPath, fileName);
+                        makeCommand(command, "UPLOAD", path, NULL);
                         send(sockfd, command, sizeof(command), 0);
                         int fileSizeNo = getFileSize(fptr);
                         sprintf(fileSizeStr, "%d", fileSizeNo);
@@ -253,7 +256,7 @@ void showMenuFunction(){
                                 read = fread(buf, 1, MAXLINE, fptr);
                                 sent = send(sockfd, buf, read, 0);
                                 totalSent += sent;
-                                printf("Sent: %d byte(s)\tTotal: %d byte(s)\tRemaining: %d\n", sent, totalSent, fileSizeNo - totalSent);
+                                printf("\rSent: %d byte(s)\tTotal: %d byte(s)\tRemaining: %d", sent, totalSent, fileSizeNo - totalSent);
                                 bzero(buf, sizeof(buf));
                                 while(strcmp(buf, "READY") != 0) {
                                         recv(sockfd, buf, MAXLINE, 0);
@@ -270,6 +273,7 @@ void showMenuFunction(){
                         char fileName[20];
                         char buf[MAXLINE];
                         char command[100];
+                        char path[256];
                         printf("Enter file name: ");
                         scanf("%s", fileName);
                         printf("File name: %s\n", fileName);
@@ -278,7 +282,8 @@ void showMenuFunction(){
                                 perror("Can't open file");
                                 exit(0);
                         }
-                        makeCommand(command, "DOWNLOAD", fileName, NULL);
+                        snprintf(path, sizeof(path), "%s/%s", currentPath, fileName);
+                        makeCommand(command, "DOWNLOAD", path, NULL);
                         send(sockfd, command, sizeof(command), 0);
                         recv(sockfd, buf, MAXLINE, 0);
                         fileSize = atoi(buf);
@@ -333,23 +338,23 @@ void showMenuFunction(){
 }
 
 void getResponse(){
-    if (recv(sockfd, serverResponse, MAXLINE, 0) == 0) {
-            perror("The server terminated prematurely");
-            exit(4);
-    }
-    cmd = convertReponseToCommand(serverResponse);
+        if (recv(sockfd, serverResponse, MAXLINE, 0) == 0) {
+                perror("The server terminated prematurely");
+                exit(4);
+        }
+        cmd = convertReponseToCommand(serverResponse);
 }
 
 void makeFolderForm(char *messageHeader){
-    char folderName[100];
-    char command[100];
-    if(strcmp(messageHeader,"BACKFOLDER")==0){
-            makeCommand(command,messageHeader, " ", currentPath);
-            send (sockfd,command,sizeof(command),0);
-            return;
-    }
-    printf("Enter folder name:\n");
-    gets(folderName);
-    makeCommand(command,messageHeader, folderName, currentPath);
-    send (sockfd,command,sizeof(command),0);
+        char folderName[100];
+        char command[100];
+        if(strcmp(messageHeader,"BACKFOLDER")==0) {
+                makeCommand(command,messageHeader, " ", currentPath);
+                send (sockfd,command,sizeof(command),0);
+                return;
+        }
+        printf("Enter folder name:\n");
+        gets(folderName);
+        makeCommand(command,messageHeader, folderName, currentPath);
+        send (sockfd,command,sizeof(command),0);
 }
