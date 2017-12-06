@@ -167,7 +167,7 @@ char* processCommand(command cmd){
                         {
                                 strcpy(message,"201|");
                                 strcpy(currentUser.username,cmd.params[0]);
-                                currentUser.id = atoi(row[2]);
+                                currentUser.id = atoi(row[3]);
                                 char temp[256] = "folder/";
                                 strcat(temp,currentUser.username);
                                 strcat(message,temp);
@@ -199,13 +199,18 @@ char* processCommand(command cmd){
         }else if (strcmp(cmd.code, "UPLOAD") == 0) {
                 int fileSize;
                 int received;
+                char path[MAXLINE];
                 int totalReceived = 0;
                 char buf[MAXLINE];
-                printf("Filename: %s\n", cmd.params[0]);
+
+                snprintf(path, sizeof(path), "%s/%s", cmd.params[0], cmd.params[1]);
+                path[strlen(path)]='\0';
+                printf("Filepath: %s\n", path);
+                printf("%s %d\n",currentUser.username,currentUser.id );
                 recv(connectSock, buf, MAXLINE, 0);
                 fileSize = atoi(buf);
                 printf("File size: %d byte(s)\n", fileSize);
-                FILE* fptr = fopen(cmd.params[0], "wb");
+                FILE* fptr = fopen(path, "wb");
                 if (fptr == NULL) {
                         perror("Can't write file");
                         return message;
@@ -227,6 +232,15 @@ char* processCommand(command cmd){
                 }
                 fclose(fptr);
                 printf("File downloading successful\n");
+                char* fileName=cmd.params[1];
+                int owner=currentUser.id;
+                char* currentPath=cmd.params[0];
+                
+                sprintf(query, "insert into file(filename,owner,path,public) values ('%s',%d,'%s',0)",fileName,currentUser.id,currentPath);
+                if (mysql_query(conn, query)) {
+                        mysql_close(conn);
+                }     
+
                 bzero(cmd.code, sizeof(cmd.code));
                 bzero(cmd.params[0], sizeof(cmd.params[0]));
                 bzero(cmd.params[1], sizeof(cmd.params[1]));
@@ -318,6 +332,27 @@ char* processCommand(command cmd){
                 strcat(message,showContentFolder(cmd.params[1]));
                 strcat(message,"|");
                 return message;
+        }else if (strcmp(cmd.code, "TOGGLE") == 0) {
+            sprintf(query, "update file set public = !public where filename='%s' and path='%s'",cmd.params[1],cmd.params[0]);
+            mysql_query(conn, query);
+
+            sprintf(query, "Select public FROM file WHERE filename='%s' and path='%s'",cmd.params[1],cmd.params[0]);
+            if (mysql_query(conn, query)) {
+                    mysql_close(conn);
+            }
+            result = mysql_store_result(conn);
+            if(result == NULL) {
+                    mysql_close(conn);
+
+            }
+            row = mysql_fetch_row(result);
+            if (atoi(row[0])==1) {
+                strcpy(message,"201|");
+            } else {
+                strcpy(message,"202|");
+            }
+
+            return message;
         }
 
 }
@@ -358,6 +393,7 @@ int makeNewFolder(char * folderName){
 
 
 void resetCurrentUser(){
+        printf("%s\n","reseted" );
         currentUser.id = 0;
         strcpy(currentUser.username,"");
         strcpy(currentUser.username,"");

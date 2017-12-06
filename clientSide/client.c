@@ -182,7 +182,7 @@ void showMenuFunction(){
                 printf("2. Enter folder\n");
                 printf("3. Upload file\n");
                 printf("4. Download file\n");
-                printf("5. Delete file\n");
+                printf("5. Change privacy\n");
                 printf("6. Delete folder\n");
                 printf("7. Back\n");
                 printf("8. Logout\n");
@@ -233,7 +233,7 @@ void showMenuFunction(){
                         int sent;
                         int read;
                         FILE *fptr;
-                        printf("Enter file name: ");
+                        printf("Enter file name: "); 
                         scanf("%s", fileName);
                         printf("File name: %s\n", fileName);
                         fptr = fopen(fileName, "rb");
@@ -241,8 +241,8 @@ void showMenuFunction(){
                                 perror("Can't open file");
                                 break;
                         }
-                        snprintf(path, sizeof(path), "%s/%s", currentPath, fileName);
-                        makeCommand(command, "UPLOAD", path, NULL);
+                        makeCommand(command, "UPLOAD", currentPath, fileName); // makeCommand to send
+                        
                         send(sockfd, command, sizeof(command), 0);
                         int fileSizeNo = getFileSize(fptr);
                         sprintf(fileSizeStr, "%d", fileSizeNo);
@@ -270,7 +270,7 @@ void showMenuFunction(){
                         int fileSize;
                         int received;
                         int totalReceived = 0;
-                        char fileName[20];
+                        char fileName[200];
                         char buf[MAXLINE];
                         char command[100];
                         char path[256];
@@ -306,8 +306,15 @@ void showMenuFunction(){
                         fclose(fptr);
                         printf("File downloading successful\n");
                 } break;
-                case 5:
-                        printf("code for delete file here\n");
+                case 5: 
+                        if(togglePrivacy()){
+                                getResponse();
+                                if (atoi(cmd.code) == 201) {
+                                        printf("Changed from public to private successfully\n");
+                                } else if (atoi(cmd.code) == 202) {
+                                        printf("Changed from private to public successfully\n");
+                                }
+                        } 
                         break;
                 case 6:
                         makeFolderForm("DELETEFOLDER");
@@ -357,4 +364,20 @@ void makeFolderForm(char *messageHeader){
         gets(folderName);
         makeCommand(command,messageHeader, folderName, currentPath);
         send (sockfd,command,sizeof(command),0);
+}
+int togglePrivacy() {
+        // enter file name,makeCommand(TOGGLE,currentPath,fileName),client receive response
+        // if currentContent include filename then makeCommand
+        char enteredFileName[200];
+        char command[200];
+        printf("Enter filename:");
+        gets(enteredFileName);
+        if(strstr(currentContent, enteredFileName) != NULL) {   
+                makeCommand(command,"TOGGLE",currentPath,enteredFileName);
+                send (sockfd,command,sizeof(command),0);
+                return 1;
+        } else {
+                printf("Not exist\n");
+                return 0;
+        }
 }
