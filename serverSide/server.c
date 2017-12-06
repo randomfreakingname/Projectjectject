@@ -353,6 +353,31 @@ char* processCommand(command cmd){
             }
 
             return message;
+        }else if (strcmp(cmd.code, "SEARCH") == 0) {
+            sprintf(query, "select path,filename from file where filename='%s' and (public=0 or owner=%d)",cmd.params[0],currentUser.id);
+            if (mysql_query(conn, query)) {
+                    mysql_close(conn);
+                    return 0;
+            }
+            result = mysql_store_result(conn);
+            if(mysql_num_rows(result)==0) {
+                    strcpy(message,"401|");
+            } else {
+                strcpy(message,"201|");
+                int i=1;
+                char numString[2];
+                while ((row = mysql_fetch_row(result))) {
+                        sprintf(numString, "%d.", i);
+                        strcat(message,numString);
+                        strcat(message,row[0]);
+                        strcat(message,"/");
+                        strcat(message,row[1]);
+                        strcat(message,"\n");
+                        i++;
+                }
+                strcat(message,"|");
+            }  
+            return message;
         }
 
 }

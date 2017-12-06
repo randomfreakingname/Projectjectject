@@ -14,3 +14,4 @@ clean:
 
 exec:
 	./$(EXEC)
+	

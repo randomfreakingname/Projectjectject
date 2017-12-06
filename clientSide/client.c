@@ -10,7 +10,7 @@
 
 typedef struct {
         char code[20];
-        char params[2][30];
+        char params[2][256];
 } command;
 
 
@@ -185,7 +185,8 @@ void showMenuFunction(){
                 printf("5. Change privacy\n");
                 printf("6. Delete folder\n");
                 printf("7. Back\n");
-                printf("8. Logout\n");
+                printf("8. Search\n");
+                printf("9. Logout\n");
                 printf("Your choice: ");
                 while (choice == 0) {
                         if(scanf("%d",&choice) < 1) {
@@ -334,11 +335,20 @@ void showMenuFunction(){
                         strcpy(currentPath, cmd.params[0]);
                         break;
                 case 8:
+                        searchAccessableFiles();
+                        getResponse();
+                        if (atoi(cmd.code) == 201) {
+                                printf("Result:\n%s",cmd.params[0]);
+                        } else if (atoi(cmd.code) == 401) {
+                                printf("No such file.\n");
+                        }
+                        break;
+                case 9:
                         printf("Bye\n");
                         break;
                 }
 
-                if (choice == 8) {
+                if (choice == 9) {
                         break;
                 }
         }
@@ -366,8 +376,6 @@ void makeFolderForm(char *messageHeader){
         send (sockfd,command,sizeof(command),0);
 }
 int togglePrivacy() {
-        // enter file name,makeCommand(TOGGLE,currentPath,fileName),client receive response
-        // if currentContent include filename then makeCommand
         char enteredFileName[200];
         char command[200];
         printf("Enter filename:");
@@ -380,4 +388,12 @@ int togglePrivacy() {
                 printf("Not exist\n");
                 return 0;
         }
+}
+void searchAccessableFiles() {
+        char enteredFileName[200];
+        char command[200];
+        printf("Enter filename:");
+        gets(enteredFileName);
+        makeCommand(command,"SEARCH",enteredFileName,NULL);
+        send (sockfd,command,sizeof(command),0);
 }
