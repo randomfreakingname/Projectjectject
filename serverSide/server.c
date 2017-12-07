@@ -205,8 +205,6 @@ char* processCommand(command cmd){
 
                 snprintf(path, sizeof(path), "%s/%s", cmd.params[0], cmd.params[1]);
                 path[strlen(path)]='\0';
-                printf("Filepath: %s\n", path);
-                printf("%s %d\n",currentUser.username,currentUser.id );
                 recv(connectSock, buf, MAXLINE, 0);
                 fileSize = atoi(buf);
                 printf("File size: %d byte(s)\n", fileSize);
@@ -235,11 +233,11 @@ char* processCommand(command cmd){
                 char* fileName=cmd.params[1];
                 int owner=currentUser.id;
                 char* currentPath=cmd.params[0];
-                
+
                 sprintf(query, "insert into file(filename,owner,path,public) values ('%s',%d,'%s',0)",fileName,currentUser.id,currentPath);
                 if (mysql_query(conn, query)) {
                         mysql_close(conn);
-                }     
+                }
 
                 bzero(cmd.code, sizeof(cmd.code));
                 bzero(cmd.params[0], sizeof(cmd.params[0]));
@@ -376,10 +374,14 @@ char* processCommand(command cmd){
                         i++;
                 }
                 strcat(message,"|");
-            }  
+            }
             return message;
+        }else if (strcmp(cmd.code, "UPDATE") == 0){
+                strcpy(message,"201|");
+                strcat(message,showContentFolder(cmd.params[0]));
+                strcat(message,"|");
+                return message;
         }
-
 }
 
 int isUserExisted(char* username) {

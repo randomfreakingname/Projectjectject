@@ -24,14 +24,16 @@ char username[30];
 char currentPath[256];
 char currentContent[256];
 
+int togglePrivacy();
 void showMenuLogin();
 void showLoginForm();
-
+void searchAccessableFiles();
 void makeCommand(char* command, char* code, char* param1, char* param2);
 void makeFolderForm(char *messageHeader);
 void showSignupForm();
 void showMenuFunction();
 void getResponse();
+void updateCurrentContent();
 command convertReponseToCommand(char *response);
 
 int getFileSize(FILE *f){
@@ -167,8 +169,10 @@ void showMenuFunction(){
         int choice;
         char c;
         while (1) {
+                updateCurrentContent();
                 choice = 0;
                 printf("\n\n");
+                printf("---------MENU----------")
                 printf("Hello, %s\n", username);
                 printf("Your current folder: %s\n",currentPath);
                 if(strcmp(currentContent,"empty") == 0) {
@@ -186,13 +190,14 @@ void showMenuFunction(){
                 printf("6. Delete folder\n");
                 printf("7. Back\n");
                 printf("8. Search\n");
-                printf("9. Logout\n");
+                printf("9. Download file by path\n");
+                printf("10. Logout\n");
                 printf("Your choice: ");
                 while (choice == 0) {
                         if(scanf("%d",&choice) < 1) {
                                 choice = 0;
                         }
-                        if(choice < 1 || choice > 8) {
+                        if(choice < 1 || choice > 10) {
                                 choice = 0;
                                 printf("Invalid choice!\n");
                                 printf("Enter again:");
@@ -234,7 +239,7 @@ void showMenuFunction(){
                         int sent;
                         int read;
                         FILE *fptr;
-                        printf("Enter file name: "); 
+                        printf("Enter file name: ");
                         scanf("%s", fileName);
                         printf("File name: %s\n", fileName);
                         fptr = fopen(fileName, "rb");
@@ -243,7 +248,7 @@ void showMenuFunction(){
                                 break;
                         }
                         makeCommand(command, "UPLOAD", currentPath, fileName); // makeCommand to send
-                        
+
                         send(sockfd, command, sizeof(command), 0);
                         int fileSizeNo = getFileSize(fptr);
                         sprintf(fileSizeStr, "%d", fileSizeNo);
@@ -307,7 +312,7 @@ void showMenuFunction(){
                         fclose(fptr);
                         printf("File downloading successful\n");
                 } break;
-                case 5: 
+                case 5:
                         if(togglePrivacy()){
                                 getResponse();
                                 if (atoi(cmd.code) == 201) {
@@ -315,7 +320,7 @@ void showMenuFunction(){
                                 } else if (atoi(cmd.code) == 202) {
                                         printf("Changed from private to public successfully\n");
                                 }
-                        } 
+                        }
                         break;
                 case 6:
                         makeFolderForm("DELETEFOLDER");
@@ -344,11 +349,13 @@ void showMenuFunction(){
                         }
                         break;
                 case 9:
+                        printf("Code for download file by path\n");
+                        break;
+                case 10:
                         printf("Bye\n");
                         break;
                 }
-
-                if (choice == 9) {
+                if (choice == 10) {
                         break;
                 }
         }
@@ -380,7 +387,7 @@ int togglePrivacy() {
         char command[200];
         printf("Enter filename:");
         gets(enteredFileName);
-        if(strstr(currentContent, enteredFileName) != NULL) {   
+        if(strstr(currentContent, enteredFileName) != NULL) {
                 makeCommand(command,"TOGGLE",currentPath,enteredFileName);
                 send (sockfd,command,sizeof(command),0);
                 return 1;
@@ -396,4 +403,17 @@ void searchAccessableFiles() {
         gets(enteredFileName);
         makeCommand(command,"SEARCH",enteredFileName,NULL);
         send (sockfd,command,sizeof(command),0);
+}
+
+void updateCurrentContent(){
+        char command[200];
+        makeCommand(command,"UPDATE",currentPath,NULL);
+        send (sockfd,command,sizeof(command),0);
+        getResponse();
+        if (atoi(cmd.code) == 201) {
+                strcpy(currentContent,cmd.params[0]);
+        }
+        else {
+          printf("Error :%s\n",cmd.params[0]);
+        }
 }
