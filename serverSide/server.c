@@ -211,6 +211,7 @@ char* processCommand(command cmd){
                 FILE* fptr = fopen(path, "wb");
                 if (fptr == NULL) {
                         perror("Can't write file");
+                        strcopy(message, "401|");
                         return message;
                 }
                 bzero(buf, sizeof(buf));
@@ -242,7 +243,8 @@ char* processCommand(command cmd){
                 bzero(cmd.code, sizeof(cmd.code));
                 bzero(cmd.params[0], sizeof(cmd.params[0]));
                 bzero(cmd.params[1], sizeof(cmd.params[1]));
-                return NULL;
+                strcopy(message, "201|");
+                return message;
         }else if (strcmp(cmd.code, "DOWNLOAD") == 0) {
                 printf("DOWNLOAD request from user %s\n", currentUser.username);
                 char fileSizeStr[12];
@@ -255,7 +257,8 @@ char* processCommand(command cmd){
                 fptr = fopen(cmd.params[0], "rb");
                 if (fptr == NULL) {
                         perror("Can't open file");
-                        exit(0);
+                        strcopy(message, "401|");
+                        return message;
                 }
                 int fileSizeNo = getFileSize(fptr);
                 sprintf(fileSizeStr, "%d", fileSizeNo);
@@ -281,7 +284,8 @@ char* processCommand(command cmd){
                 bzero(cmd.code, sizeof(cmd.code));
                 bzero(cmd.params[0], sizeof(cmd.params[0]));
                 bzero(cmd.params[1], sizeof(cmd.params[1]));
-                return NULL;
+                strcopy(message, "201|");
+                return message;
         }else if (strcmp(cmd.code, "MAKEFOLDER") == 0) {
                 strcpy(temp, cmd.params[1]);
                 strcat(temp,"/");
@@ -331,56 +335,113 @@ char* processCommand(command cmd){
                 strcat(message,"|");
                 return message;
         }else if (strcmp(cmd.code, "TOGGLE") == 0) {
-            sprintf(query, "update file set public = !public where filename='%s' and path='%s'",cmd.params[1],cmd.params[0]);
-            mysql_query(conn, query);
+                sprintf(query, "update file set public = !public where filename='%s' and path='%s'",cmd.params[1],cmd.params[0]);
+                mysql_query(conn, query);
 
-            sprintf(query, "Select public FROM file WHERE filename='%s' and path='%s'",cmd.params[1],cmd.params[0]);
-            if (mysql_query(conn, query)) {
-                    mysql_close(conn);
-            }
-            result = mysql_store_result(conn);
-            if(result == NULL) {
-                    mysql_close(conn);
-
-            }
-            row = mysql_fetch_row(result);
-            if (atoi(row[0])==1) {
-                strcpy(message,"201|");
-            } else {
-                strcpy(message,"202|");
-            }
-
-            return message;
-        }else if (strcmp(cmd.code, "SEARCH") == 0) {
-            sprintf(query, "select path,filename from file where filename='%s' and (public=0 or owner=%d)",cmd.params[0],currentUser.id);
-            if (mysql_query(conn, query)) {
-                    mysql_close(conn);
-                    return 0;
-            }
-            result = mysql_store_result(conn);
-            if(mysql_num_rows(result)==0) {
-                    strcpy(message,"401|");
-            } else {
-                strcpy(message,"201|");
-                int i=1;
-                char numString[2];
-                while ((row = mysql_fetch_row(result))) {
-                        sprintf(numString, "%d.", i);
-                        strcat(message,numString);
-                        strcat(message,row[0]);
-                        strcat(message,"/");
-                        strcat(message,row[1]);
-                        strcat(message,"\n");
-                        i++;
+                sprintf(query, "Select public FROM file WHERE filename='%s' and path='%s'",cmd.params[1],cmd.params[0]);
+                if (mysql_query(conn, query)) {
+                        mysql_close(conn);
                 }
-                strcat(message,"|");
-            }
-            return message;
-        }else if (strcmp(cmd.code, "UPDATE") == 0){
+                result = mysql_store_result(conn);
+                if(result == NULL) {
+                        mysql_close(conn);
+
+                }
+                row = mysql_fetch_row(result);
+                if (atoi(row[0])==1) {
+                        strcpy(message,"201|");
+                } else {
+                        strcpy(message,"202|");
+                }
+
+                return message;
+        }else if (strcmp(cmd.code, "SEARCH") == 0) {
+                sprintf(query, "select path,filename from file where filename='%s' and (public=0 or owner=%d)",cmd.params[0],currentUser.id);
+                if (mysql_query(conn, query)) {
+                        mysql_close(conn);
+                        return 0;
+                }
+                result = mysql_store_result(conn);
+                if(mysql_num_rows(result)==0) {
+                        strcpy(message,"401|");
+                } else {
+                        strcpy(message,"201|");
+                        int i=1;
+                        char numString[2];
+                        while ((row = mysql_fetch_row(result))) {
+                                sprintf(numString, "%d.", i);
+                                strcat(message,numString);
+                                strcat(message,row[0]);
+                                strcat(message,"/");
+                                strcat(message,row[1]);
+                                strcat(message,"\n");
+                                i++;
+                        }
+                        strcat(message,"|");
+                }
+                return message;
+        }else if (strcmp(cmd.code, "UPDATE") == 0) {
                 strcpy(message,"201|");
                 strcat(message,showContentFolder(cmd.params[0]));
                 strcat(message,"|");
                 return message;
+        }else if (strcmp(cmd.code, "DOWNLOADBYPATH") == 0) {
+                sprintf(query, "select owner,public from file where path='%s'",cmd.params[0]);
+                if (mysql_query(conn, query)) {
+                        mysql_close(conn);
+                        return 0;
+                }
+                result = mysql_store_result(conn);
+                if(mysql_num_rows(result)==0) {
+                        strcpy(message,"401|");
+                } else {
+                        row = mysql_fetch_row(result);
+                        if ((row[1] == 0 && currentUser.id != row[1])) {
+                                strcopy(message, "401|");
+                                return message;
+                        } else{
+                                printf("DOWNLOADBYPATH request from user %s\n", currentUser.username);
+                                char fileSizeStr[12];
+                                char buf[MAXLINE];
+                                int totalSent = 0;
+                                int sent;
+                                int read;
+                                FILE *fptr;
+                                printf("Filepath: %s\n", cmd.params[0]);
+                                fptr = fopen(cmd.params[0], "rb");
+                                if (fptr == NULL) {
+                                        perror("Can't open file");
+                                        strcopy(message, "401|");
+                                        return message;
+                                }
+                                int fileSizeNo = getFileSize(fptr);
+                                sprintf(fileSizeStr, "%d", fileSizeNo);
+                                printf("File size : %d byte(s)\n", fileSizeNo);
+                                send(connectSock, fileSizeStr, strlen(fileSizeStr), 0);
+                                while(strcmp(buf, "READY") != 0) {
+                                        recv(connectSock, buf, MAXLINE, 0);
+                                }
+                                printf("Client is ready. Begin uploading...\n");
+                                while(totalSent < fileSizeNo) {
+                                        read = fread(buf, 1, MAXLINE, fptr);
+                                        sent = send(connectSock, buf, read, 0);
+                                        totalSent += sent;
+                                        printf("Sent: %d byte(s)\tTotal: %d byte(s)\tRemaining: %d\n", sent, totalSent, fileSizeNo - totalSent);
+                                        bzero(buf, sizeof(buf));
+                                        while(strcmp(buf, "READY") != 0) {
+                                                recv(connectSock, buf, MAXLINE, 0);
+                                        }
+                                        bzero(buf, sizeof(buf));
+                                }
+                                fclose(fptr);
+                                printf("File uploading successful\n");
+                                bzero(cmd.code, sizeof(cmd.code));
+                                bzero(cmd.params[0], sizeof(cmd.params[0]));
+                                bzero(cmd.params[1], sizeof(cmd.params[1]));
+                                strcopy(message, "201|");
+                                return message;
+                        }
+                }
         }
 }
 

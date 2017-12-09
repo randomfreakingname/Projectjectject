@@ -230,6 +230,7 @@ void showMenuFunction(){
                         }
                         break;
                 case 3: {
+                        char fileNameOrPath[100];
                         char fileName[20];
                         char fileSizeStr[12];
                         char buf[MAXLINE];
@@ -239,14 +240,15 @@ void showMenuFunction(){
                         int sent;
                         int read;
                         FILE *fptr;
-                        printf("Enter file name: ");
-                        scanf("%s", fileName);
-                        printf("File name: %s\n", fileName);
-                        fptr = fopen(fileName, "rb");
+                        printf("Enter file name or file path: ");
+                        scanf("%s", fileNameOrPath);
+                        printf("File name/path: %s\n", fileNameOrPath);
+                        fptr = fopen(fileNameOrPath, "rb");
                         if (fptr == NULL) {
                                 perror("Can't open file");
                                 break;
                         }
+                        fileName = strrchr(fileNameOrPath, '/');
                         makeCommand(command, "UPLOAD", currentPath, fileName); // makeCommand to send
 
                         send(sockfd, command, sizeof(command), 0);
@@ -313,7 +315,7 @@ void showMenuFunction(){
                         printf("File downloading successful\n");
                 } break;
                 case 5:
-                        if(togglePrivacy()){
+                        if(togglePrivacy()) {
                                 getResponse();
                                 if (atoi(cmd.code) == 201) {
                                         printf("Changed from public to private successfully\n");
@@ -349,7 +351,41 @@ void showMenuFunction(){
                         }
                         break;
                 case 9:
-                        printf("Code for download file by path\n");
+                        int fileSize;
+                        int received;
+                        int totalReceived = 0;
+                        char filePath[200];
+                        char buf[MAXLINE];
+                        char command[100];
+                        printf("Enter file path: ");
+                        scanf("%s", filePath);
+                        FILE* fptr = fopen(fileName, "wb");
+                        if (fptr == NULL) {
+                                perror("Can't open file");
+                                exit(0);
+                        }
+                        makeCommand(command, "DOWNLOADBYPATH", filePath, NULL);
+                        send(sockfd, command, sizeof(command), 0);
+                        recv(sockfd, buf, MAXLINE, 0);
+                        fileSize = atoi(buf);
+                        printf("File size: %d byte(s)\n", fileSize);
+                        bzero(buf, sizeof(buf));
+                        send(sockfd, "READY", MAXLINE, 0);
+                        printf("Client ready to download\n");
+                        while(totalReceived < fileSize) {
+                                received = recv(sockfd, buf, MAXLINE, 0);
+                                totalReceived += received;
+                                printf("Received: %d byte(s)\tTotal: %d byte(s)\tRemaining: %d byte(s)\n", received, totalReceived, fileSize - totalReceived);
+                                if(received <= 0) {
+                                        printf("Lost connection to server\n");
+                                        break;
+                                }
+                                fwrite(buf, 1, received, fptr);
+                                bzero(buf, sizeof(buf));
+                                send(sockfd, "READY", MAXLINE, 0);
+                        }
+                        fclose(fptr);
+                        printf("File downloading successful\n");
                         break;
                 case 10:
                         printf("Bye\n");
@@ -414,6 +450,6 @@ void updateCurrentContent(){
                 strcpy(currentContent,cmd.params[0]);
         }
         else {
-          printf("Error :%s\n",cmd.params[0]);
+                printf("Error :%s\n",cmd.params[0]);
         }
 }
