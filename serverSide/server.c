@@ -211,7 +211,7 @@ char* processCommand(command cmd){
                 FILE* fptr = fopen(path, "wb");
                 if (fptr == NULL) {
                         perror("Can't write file");
-                        strcopy(message, "401|");
+                        strcpy(message, "401|");
                         return message;
                 }
                 bzero(buf, sizeof(buf));
@@ -243,7 +243,7 @@ char* processCommand(command cmd){
                 bzero(cmd.code, sizeof(cmd.code));
                 bzero(cmd.params[0], sizeof(cmd.params[0]));
                 bzero(cmd.params[1], sizeof(cmd.params[1]));
-                strcopy(message, "201|");
+                strcpy(message, "201|");
                 return message;
         }else if (strcmp(cmd.code, "DOWNLOAD") == 0) {
                 printf("DOWNLOAD request from user %s\n", currentUser.username);
@@ -257,7 +257,7 @@ char* processCommand(command cmd){
                 fptr = fopen(cmd.params[0], "rb");
                 if (fptr == NULL) {
                         perror("Can't open file");
-                        strcopy(message, "401|");
+                        strcpy(message, "401|");
                         return message;
                 }
                 int fileSizeNo = getFileSize(fptr);
@@ -284,7 +284,7 @@ char* processCommand(command cmd){
                 bzero(cmd.code, sizeof(cmd.code));
                 bzero(cmd.params[0], sizeof(cmd.params[0]));
                 bzero(cmd.params[1], sizeof(cmd.params[1]));
-                strcopy(message, "201|");
+                strcpy(message, "201|");
                 return message;
         }else if (strcmp(cmd.code, "MAKEFOLDER") == 0) {
                 strcpy(temp, cmd.params[1]);
@@ -397,7 +397,7 @@ char* processCommand(command cmd){
                 } else {
                         row = mysql_fetch_row(result);
                         if ((row[1] == 0 && currentUser.id != row[1])) {
-                                strcopy(message, "401|");
+                                strcpy(message, "401|");
                                 return message;
                         } else{
                                 printf("DOWNLOADBYPATH request from user %s\n", currentUser.username);
@@ -411,7 +411,7 @@ char* processCommand(command cmd){
                                 fptr = fopen(cmd.params[0], "rb");
                                 if (fptr == NULL) {
                                         perror("Can't open file");
-                                        strcopy(message, "401|");
+                                        strcpy(message, "401|");
                                         return message;
                                 }
                                 int fileSizeNo = getFileSize(fptr);
@@ -438,7 +438,7 @@ char* processCommand(command cmd){
                                 bzero(cmd.code, sizeof(cmd.code));
                                 bzero(cmd.params[0], sizeof(cmd.params[0]));
                                 bzero(cmd.params[1], sizeof(cmd.params[1]));
-                                strcopy(message, "201|");
+                                strcpy(message, "201|");
                                 return message;
                         }
                 }

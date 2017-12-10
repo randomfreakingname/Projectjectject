@@ -44,6 +44,12 @@ int getFileSize(FILE *f){
         return size;
 }
 
+char* getFileName(const char *filename) {
+        char *dot = strrchr(filename, '/');
+        if(!dot || dot == filename) return "";
+        return dot + 1;
+}
+
 int main(){
         sockfd = socket(AF_INET,SOCK_STREAM,0);
         struct sockaddr_in serverAddr;
@@ -172,7 +178,7 @@ void showMenuFunction(){
                 updateCurrentContent();
                 choice = 0;
                 printf("\n\n");
-                printf("---------MENU----------")
+                printf("---------MENU----------\n");
                 printf("Hello, %s\n", username);
                 printf("Your current folder: %s\n",currentPath);
                 if(strcmp(currentContent,"empty") == 0) {
@@ -242,13 +248,17 @@ void showMenuFunction(){
                         FILE *fptr;
                         printf("Enter file name or file path: ");
                         scanf("%s", fileNameOrPath);
-                        printf("File name/path: %s\n", fileNameOrPath);
+                        printf("Raw file name/file path: %s\n", fileNameOrPath);
+                        strcpy(fileName, getFileName(fileNameOrPath));
+                        if (strcmp(fileName, "") == 0){
+                          strcpy(fileName, fileNameOrPath);
+                        }
+                        printf("Processed file name: %s\n", fileName);
                         fptr = fopen(fileNameOrPath, "rb");
                         if (fptr == NULL) {
                                 perror("Can't open file");
                                 break;
                         }
-                        fileName = strrchr(fileNameOrPath, '/');
                         makeCommand(command, "UPLOAD", currentPath, fileName); // makeCommand to send
 
                         send(sockfd, command, sizeof(command), 0);
@@ -264,7 +274,7 @@ void showMenuFunction(){
                                 read = fread(buf, 1, MAXLINE, fptr);
                                 sent = send(sockfd, buf, read, 0);
                                 totalSent += sent;
-                                printf("\rSent: %d byte(s)\tTotal: %d byte(s)\tRemaining: %d", sent, totalSent, fileSizeNo - totalSent);
+                                printf("Sent: %d byte(s)\tTotal: %d byte(s)\tRemaining: %d\n", sent, totalSent, fileSizeNo - totalSent);
                                 bzero(buf, sizeof(buf));
                                 while(strcmp(buf, "READY") != 0) {
                                         recv(sockfd, buf, MAXLINE, 0);
@@ -350,15 +360,22 @@ void showMenuFunction(){
                                 printf("No such file.\n");
                         }
                         break;
-                case 9:
+                case 9: {
                         int fileSize;
                         int received;
                         int totalReceived = 0;
-                        char filePath[200];
+                        char filePath[100];
+                        char fileName[20];
                         char buf[MAXLINE];
                         char command[100];
                         printf("Enter file path: ");
                         scanf("%s", filePath);
+                        printf("Raw file path: %s\n", filePath);
+                        strcpy(fileName, getFileName(filePath));
+                        if (strcmp(fileName, "") == 0){
+                          strcpy(fileName, filePath);
+                        }
+                        printf("Processed file name: %s\n", fileName);
                         FILE* fptr = fopen(fileName, "wb");
                         if (fptr == NULL) {
                                 perror("Can't open file");
@@ -386,7 +403,7 @@ void showMenuFunction(){
                         }
                         fclose(fptr);
                         printf("File downloading successful\n");
-                        break;
+                } break;
                 case 10:
                         printf("Bye\n");
                         break;
