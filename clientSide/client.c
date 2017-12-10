@@ -283,6 +283,7 @@ void showMenuFunction(){
                         }
                         fclose(fptr);
                         printf("File uploading successful\n");
+                        getResponse();
                 } break;
                 case 4: {
                         int fileSize;
@@ -323,6 +324,7 @@ void showMenuFunction(){
                         }
                         fclose(fptr);
                         printf("File downloading successful\n");
+                        getResponse();
                 } break;
                 case 5:
                         if(togglePrivacy()) {
@@ -403,6 +405,7 @@ void showMenuFunction(){
                         }
                         fclose(fptr);
                         printf("File downloading successful\n");
+                        getResponse();
                 } break;
                 case 10:
                         printf("Bye\n");

@@ -338,6 +338,7 @@ char* processCommand(command cmd){
                 sprintf(query, "update file set public = !public where filename='%s' and path='%s'",cmd.params[1],cmd.params[0]);
                 mysql_query(conn, query);
 
+
                 sprintf(query, "Select public FROM file WHERE filename='%s' and path='%s'",cmd.params[1],cmd.params[0]);
                 if (mysql_query(conn, query)) {
                         mysql_close(conn);
@@ -394,9 +395,10 @@ char* processCommand(command cmd){
                 result = mysql_store_result(conn);
                 if(mysql_num_rows(result)==0) {
                         strcpy(message,"401|");
+                        return message;
                 } else {
                         row = mysql_fetch_row(result);
-                        if ((row[1] == 0 && currentUser.id != row[1])) {
+                        if ((row[1] == 0 && currentUser.id != atoi(row[1]))) {
                                 strcpy(message, "401|");
                                 return message;
                         } else{
