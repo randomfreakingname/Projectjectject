@@ -235,7 +235,7 @@ char* processCommand(command cmd){
                 int owner=currentUser.id;
                 char* currentPath=cmd.params[0];
 
-                sprintf(query, "insert into file(filename,owner,path,public) values ('%s',%d,'%s',0)",fileName,currentUser.id,currentPath);
+                sprintf(query, "insert into file(filename,owner,path,public) values ('%s',%d,'%s/%s',0)",fileName,currentUser.id,currentPath,fileName);
                 if (mysql_query(conn, query)) {
                         mysql_close(conn);
                 }
@@ -357,7 +357,7 @@ char* processCommand(command cmd){
 
                 return message;
         }else if (strcmp(cmd.code, "SEARCH") == 0) {
-                sprintf(query, "select path,filename from file where filename='%s' and (public=0 or owner=%d)",cmd.params[0],currentUser.id);
+                sprintf(query, "select path from file where filename='%s' and (public=0 or owner=%d)",cmd.params[0],currentUser.id);
                 if (mysql_query(conn, query)) {
                         mysql_close(conn);
                         return 0;
@@ -373,8 +373,6 @@ char* processCommand(command cmd){
                                 sprintf(numString, "%d.", i);
                                 strcat(message,numString);
                                 strcat(message,row[0]);
-                                strcat(message,"/");
-                                strcat(message,row[1]);
                                 strcat(message,"\n");
                                 i++;
                         }
