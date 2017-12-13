@@ -335,11 +335,12 @@ char* processCommand(command cmd){
                 strcat(message,"|");
                 return message;
         }else if (strcmp(cmd.code, "TOGGLE") == 0) {
-                sprintf(query, "update file set public = !public where filename='%s' and path='%s'",cmd.params[1],cmd.params[0]);
+
+                sprintf(query, "update file set public = !public where filename='%s' and path='%s/%s'",cmd.params[1],cmd.params[0],cmd.params[1]);
                 mysql_query(conn, query);
 
 
-                sprintf(query, "Select public FROM file WHERE filename='%s' and path='%s'",cmd.params[1],cmd.params[0]);
+                sprintf(query, "Select public FROM file WHERE filename='%s' and path='%s/%s'",cmd.params[1],cmd.params[0],cmd.params[1]);
                 if (mysql_query(conn, query)) {
                         mysql_close(conn);
                 }
