@@ -358,7 +358,7 @@ char* processCommand(command cmd){
 
                 return message;
         }else if (strcmp(cmd.code, "SEARCH") == 0) {
-                sprintf(query, "select path from file where filename='%s' and (public=0 or owner=%d)",cmd.params[0],currentUser.id);
+                sprintf(query, "select path from file left join privilege on file.id=privilege.fileId where (public=0 or owner=%d or userId=%d) and filename='%s'",currentUser.id,currentUser.id,cmd.params[0]);
                 if (mysql_query(conn, query)) {
                         mysql_close(conn);
                         return 0;
@@ -442,6 +442,24 @@ char* processCommand(command cmd){
                                 strcpy(message, "201|");
                                 return message;
                         }
+                }
+        } else if (strcmp(cmd.code, "SHARE") == 0) {
+                if (isUserExisted(cmd.params[1]))
+                {
+                        if (isFilePublic(cmd.params[0])) {
+                                strcpy(message,"402|");
+                        } else {
+                                sprintf(query, "insert into privilege(fileId,userId) values(%d,%d)",getFileId(cmd.params[0]),getUserId(cmd.params[1]));
+                                if (mysql_query(conn, query)) {
+                                        mysql_close(conn);
+                                        return 0;
+                                }
+                                strcpy(message,"201|");
+                        }
+                        return message;
+                } else {
+                        strcpy(message,"401|");
+                        return message;
                 }
         }
 }
@@ -545,5 +563,74 @@ void backFolder(char *path){
                         break;
                 }
                 i--;
+        }
+}
+
+int isFilePublic(char* filepath) {
+        MYSQL_RES *result;
+        MYSQL_ROW row;
+        char query[1000];
+        sprintf(query, "select public from file where path='%s'",filepath);
+        if (mysql_query(conn, query)) {
+                mysql_close(conn);
+                return 0;
+        }
+        result = mysql_store_result(conn);
+        if(result == NULL) {
+                mysql_close(conn);
+                return 0;
+        }
+        while ((row = mysql_fetch_row(result))) {
+                if (atoi(row[0])<1) {
+                        return 1;
+                } else {
+                        return 0;
+                }
+        }
+}
+
+int getUserId(char* username){
+        MYSQL_RES *result;
+        MYSQL_ROW row;
+        char query[1000];
+        sprintf(query, "Select count(*),id FROM user WHERE username ='%s'",username);
+        if (mysql_query(conn, query)) {
+                mysql_close(conn);
+                return 0;
+        }
+        result = mysql_store_result(conn);
+        if(result == NULL) {
+                mysql_close(conn);
+                return 0;
+        }
+        while ((row = mysql_fetch_row(result))) {
+                if (atoi(row[0])<1) {
+                        return -1;
+                } else {
+                        return atoi(row[1]);
+                }
+        }
+}
+
+int getFileId(char* filepath){
+        MYSQL_RES *result;
+        MYSQL_ROW row;
+        char query[1000];
+        sprintf(query, "Select count(*),id FROM file WHERE path ='%s'",filepath);
+        if (mysql_query(conn, query)) {
+                mysql_close(conn);
+                return 0;
+        }
+        result = mysql_store_result(conn);
+        if(result == NULL) {
+                mysql_close(conn);
+                return 0;
+        }
+        while ((row = mysql_fetch_row(result))) {
+                if (atoi(row[0])<1) {
+                        return -1;
+                } else {
+                        return atoi(row[1]);
+                }
         }
 }

@@ -197,13 +197,14 @@ void showMenuFunction(){
                 printf("7. Back\n");
                 printf("8. Search\n");
                 printf("9. Download file by path\n");
-                printf("10. Logout\n");
+                printf("10. Share privilege\n");
+                printf("11. Logout\n");
                 printf("Your choice: ");
                 while (choice == 0) {
                         if(scanf("%d",&choice) < 1) {
                                 choice = 0;
                         }
-                        if(choice < 1 || choice > 10) {
+                        if(choice < 1 || choice > 11) {
                                 choice = 0;
                                 printf("Invalid choice!\n");
                                 printf("Enter again:");
@@ -408,10 +409,22 @@ void showMenuFunction(){
                         getResponse();
                 } break;
                 case 10:
+                        if(sharePrivilege()) {
+                                getResponse();
+                                if (atoi(cmd.code) == 401) {
+                                        printf("No such username.\n");
+                                } else if (atoi(cmd.code) == 402) {
+                                        printf("Can not share public file(s).\n");
+                                } else if (atoi(cmd.code) == 201) {
+                                        printf("Shared privilege succesfully.\n");
+                                }
+                        }
+                        break;
+                case 11:
                         printf("Bye\n");
                         break;
                 }
-                if (choice == 10) {
+                if (choice == 11) {
                         break;
                 }
         }
@@ -471,5 +484,25 @@ void updateCurrentContent(){
         }
         else {
                 printf("Error :%s\n",cmd.params[0]);
+        }
+}
+
+int sharePrivilege() {
+        char enteredFileName[200];
+        char enteredUserName[200];
+        char filePath[256];
+        char command[200];
+        printf("Enter filename:");
+        gets(enteredFileName);
+        if(strstr(currentContent, enteredFileName) != NULL) {
+                sprintf(filePath, "%s/%s",currentPath,enteredFileName);
+                printf("Enter username:");
+                gets(enteredUserName);
+                makeCommand(command,"SHARE",filePath,enteredUserName);
+                send (sockfd,command,sizeof(command),0);
+                return 1;
+        } else {
+                printf("Not exist\n");
+                return 0;
         }
 }
