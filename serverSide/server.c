@@ -54,6 +54,9 @@ int deleteFolder(char *folderName);
 int operateFolder(char *folderName, char *operation);
 char *updatePath();
 void backFolder(char *path);
+int isFilePublic(char* filepath);
+int getUserId(char* username);
+int getFileId(char* filepath);
 command cmd;
 
 int getFileSize(FILE *f){
@@ -449,6 +452,7 @@ char* processCommand(command cmd){
                         if (isFilePublic(cmd.params[0])) {
                                 strcpy(message,"402|");
                         } else {
+                                printf("(%d,%d)\n",getFileId(cmd.params[0]),getUserId(cmd.params[1]));
                                 sprintf(query, "insert into privilege(fileId,userId) values(%d,%d)",getFileId(cmd.params[0]),getUserId(cmd.params[1]));
                                 if (mysql_query(conn, query)) {
                                         mysql_close(conn);
@@ -531,7 +535,15 @@ char* showContentFolder(char *folderPath){
 
 int deleteFolder(char *folderName){
         char command[256];
-        sprintf(command,"rmdir %s",folderName);
+        sprintf(command,"rm -rf %s",folderName);
+        printf("hello %s\n", folderName);
+        char query[1000];
+        sprintf(query, "DELETE FROM file WHERE path like '%s%%'",folderName);
+        printf("qwe %s\n",query );
+        if (mysql_query(conn, query)) {
+                mysql_close(conn);
+                return 0;
+        }
         if(system(command) == 0 ) {
                 return 1;
         }
@@ -616,7 +628,7 @@ int getFileId(char* filepath){
         MYSQL_RES *result;
         MYSQL_ROW row;
         char query[1000];
-        sprintf(query, "Select count(*),id FROM file WHERE path ='%s'",filepath);
+        sprintf(query, "Select id FROM file WHERE path ='%s'",filepath);
         if (mysql_query(conn, query)) {
                 mysql_close(conn);
                 return 0;
@@ -630,7 +642,7 @@ int getFileId(char* filepath){
                 if (atoi(row[0])<1) {
                         return -1;
                 } else {
-                        return atoi(row[1]);
+                        return atoi(row[0]);
                 }
         }
 }

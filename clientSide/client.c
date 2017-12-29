@@ -35,7 +35,7 @@ void showMenuFunction();
 void getResponse();
 void updateCurrentContent();
 command convertReponseToCommand(char *response);
-
+int sharePrivilege();
 int getFileSize(FILE *f){
         int size;
         fseek(f, 0L, SEEK_END);
