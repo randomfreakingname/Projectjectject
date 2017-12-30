@@ -29,7 +29,7 @@ void showMenuLogin();
 void showLoginForm();
 void searchAccessableFiles();
 void makeCommand(char* command, char* code, char* param1, char* param2);
-void makeFolderForm(char *messageHeader);
+int makeFolderForm(char *messageHeader);
 void showSignupForm();
 void showMenuFunction();
 void getResponse();
@@ -193,7 +193,7 @@ void showMenuFunction(){
                 printf("3. Upload file\n");
                 printf("4. Download file\n");
                 printf("5. Change privacy\n");
-                printf("6. Delete folder\n");
+                printf("6. Delete folder or file\n");
                 printf("7. Back\n");
                 printf("8. Search\n");
                 printf("9. Download file by path\n");
@@ -338,21 +338,24 @@ void showMenuFunction(){
                         }
                         break;
                 case 6:
-                        makeFolderForm("DELETEFOLDER");
-                        getResponse();
-                        if (atoi(cmd.code) == 201) {
-                                printf("Delele folder successfully\n");
-                                strcpy(currentContent,cmd.params[0]);
-                        }
-                        else {
-                                printf("Error :%s\n",cmd.params[0]);
+                        if(makeFolderForm("DELETEFOLDER")==1){
+                                getResponse();
+                                if (atoi(cmd.code) == 201) {
+                                        printf("Delele successfully\n");
+                                        strcpy(currentContent,cmd.params[0]);
+                                }
+                                else {
+                                        printf("Error:%s\n",cmd.params[0]);
+                                }
                         }
                         break;
                 case 7:
-                        makeFolderForm("BACKFOLDER");
-                        getResponse();
-                        strcpy(currentContent,cmd.params[1]);
-                        strcpy(currentPath, cmd.params[0]);
+                        if(makeFolderForm("BACKFOLDER")){
+                                getResponse();
+                                strcpy(currentContent,cmd.params[1]);
+                                strcpy(currentPath, cmd.params[0]);
+                        }
+
                         break;
                 case 8:
                         searchAccessableFiles();
@@ -438,19 +441,42 @@ void getResponse(){
         cmd = convertReponseToCommand(serverResponse);
 }
 
-void makeFolderForm(char *messageHeader){
+int makeFolderForm(char *messageHeader){
         char folderName[100];
         char command[100];
+        char isSure[10];
+        char temp[100];
+        sprintf(temp, "folder/%s",username);
         if(strcmp(messageHeader,"BACKFOLDER")==0) {
+                if(strcmp(currentPath,temp) == 0){
+                        printf("%s\n","Cant back" );
+                        return 0;
+                }
                 makeCommand(command,messageHeader, " ", currentPath);
                 send (sockfd,command,sizeof(command),0);
-                return;
+                return 1;
+        }
+        if(strcmp(messageHeader,"DELETEFOLDER")==0) {
+                printf("Enter folder or filename: ");
+                gets(folderName);
+                printf("Are you sure?(Y/N):");
+                gets(isSure);
+                if (strcmp(isSure,"Y") == 0){
+                        makeCommand(command,messageHeader, folderName, currentPath);
+                        send (sockfd,command,sizeof(command),0);
+                        return 1;
+                }
+                return 0;
         }
         printf("Enter folder name:\n");
         gets(folderName);
         makeCommand(command,messageHeader, folderName, currentPath);
         send (sockfd,command,sizeof(command),0);
+        return 1;
 }
+
+
+
 int togglePrivacy() {
         char enteredFileName[200];
         char command[200];

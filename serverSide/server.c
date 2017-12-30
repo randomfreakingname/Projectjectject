@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <mysql/mysql.h>
+#include <errno.h>
 
 #define MAXLINE 4096 /*max text line length*/
 #define SERV_PORT 3000 /*port*/
@@ -57,6 +58,7 @@ void backFolder(char *path);
 int isFilePublic(char* filepath);
 int getUserId(char* username);
 int getFileId(char* filepath);
+int deleteFile(char *fileName);
 command cmd;
 
 int getFileSize(FILE *f){
@@ -205,7 +207,6 @@ char* processCommand(command cmd){
                 char path[MAXLINE];
                 int totalReceived = 0;
                 char buf[MAXLINE];
-
                 snprintf(path, sizeof(path), "%s/%s", cmd.params[0], cmd.params[1]);
                 path[strlen(path)]='\0';
                 recv(connectSock, buf, MAXLINE, 0);
@@ -239,10 +240,7 @@ char* processCommand(command cmd){
                 char* currentPath=cmd.params[0];
 
                 sprintf(query, "insert into file(filename,owner,path,public) values ('%s',%d,'%s/%s',0)",fileName,currentUser.id,currentPath,fileName);
-                if (mysql_query(conn, query)) {
-                        mysql_close(conn);
-                }
-
+                mysql_query(conn, query);
                 bzero(cmd.code, sizeof(cmd.code));
                 bzero(cmd.params[0], sizeof(cmd.params[0]));
                 bzero(cmd.params[1], sizeof(cmd.params[1]));
@@ -305,12 +303,18 @@ char* processCommand(command cmd){
                 strcpy(temp, cmd.params[1]);
                 strcat(temp,"/");
                 strcat(temp, cmd.params[0]);
+                if (deleteFile(temp) == 1) {
+                        strcpy(message,"201|");
+                        strcat(message,showContentFolder(cmd.params[1]));
+                        strcat(message,"|");
+                        return message;
+                }
                 if( deleteFolder(temp) == 1) {
                         strcpy(message,"201|");
                         strcat(message,showContentFolder(cmd.params[1]));
                         strcat(message,"|");
                 }else{
-                        strcpy(message,"401|Not a folder");
+                        strcpy(message,"401|Not exist");
                 }
                 return message;
         }else if (strcmp(cmd.code, "ENTERFOLDER") == 0) {
@@ -350,7 +354,6 @@ char* processCommand(command cmd){
                 result = mysql_store_result(conn);
                 if(result == NULL) {
                         mysql_close(conn);
-
                 }
                 row = mysql_fetch_row(result);
                 if (atoi(row[0])==1) {
@@ -536,15 +539,28 @@ char* showContentFolder(char *folderPath){
 int deleteFolder(char *folderName){
         char command[256];
         sprintf(command,"rm -rf %s",folderName);
-        printf("hello %s\n", folderName);
         char query[1000];
         sprintf(query, "DELETE FROM file WHERE path like '%s%%'",folderName);
-        printf("qwe %s\n",query );
-        if (mysql_query(conn, query)) {
-                mysql_close(conn);
-                return 0;
-        }
         if(system(command) == 0 ) {
+                if (mysql_query(conn, query)) {
+                        mysql_close(conn);
+                        return 0;
+                }
+                return 1;
+        }
+        return 0;
+}
+
+int deleteFile(char *fileName){
+        char command[256];
+        sprintf(command,"rm -f %s",fileName);
+        char query[1000];
+        sprintf(query, "DELETE FROM file WHERE path ='%s'",fileName);
+        if(system(command) == 0 ) {
+                if (mysql_query(conn, query)) {
+                        mysql_close(conn);
+                        return 0;
+                }
                 return 1;
         }
         return 0;
