@@ -11,7 +11,7 @@
 #include <mysql/mysql.h>
 #include <errno.h>
 
-#define MAXLINE 4096 /*max text line length*/
+#define MAXLINE 1024 /*max text line length*/
 #define SERV_PORT 3000 /*port*/
 #define LISTENQ 8 /*maximum number of client connections*/
 
@@ -31,15 +31,15 @@ struct sockaddr_in serverAddr, clientAddr;
 socklen_t clilen;
 
 typedef struct {
-        char username[30];
+        char username[100];
         int id;
         char path[256];
 } User;
 
 
 typedef struct {
-        char code[20];
-        char params[2][30];
+        char code[100];
+        char params[2][100];
 } command;
 
 User currentUser;
@@ -96,16 +96,17 @@ int main(){
         }
         listen(listenSock,LISTENQ);
         clilen = sizeof(clientAddr);
-        char* message;
+
         while (1) {
                 connectSock = accept (listenSock, (struct sockaddr *) &clientAddr, &clilen);
                 if((pid=fork()) == 0) {
                         close(listenSock);
                         while ((n = recv(connectSock, request, MAXLINE,0)) > 0)  {
+                                char* message;
                                 cmd = convertRequestToCommand(request);
                                 message = processCommand(cmd);
                                 if (message != NULL) {
-                                        send(connectSock, message, MAXLINE, 0);
+                                        send(connectSock, message, strlen(message), 0);
                                 }
                         }
                         resetCurrentUser();
@@ -150,6 +151,7 @@ char* processCommand(command cmd){
         char* message = malloc(MAXLINE*sizeof(char));
         char query[1000];
         char temp[100];
+
         if(strcmp(cmd.code,"LOGIN") == 0) {
                 int i;
                 sprintf(query, "Select count(*),username,password,id FROM user WHERE username ='%s'",cmd.params[0]);
@@ -207,10 +209,12 @@ char* processCommand(command cmd){
                 char path[MAXLINE];
                 int totalReceived = 0;
                 char buf[MAXLINE];
+                int n;
                 snprintf(path, sizeof(path), "%s/%s", cmd.params[0], cmd.params[1]);
                 path[strlen(path)]='\0';
-                recv(connectSock, buf, MAXLINE, 0);
+                n = recv(connectSock, buf, MAXLINE, 0);
                 fileSize = atoi(buf);
+
                 printf("File size: %d byte(s)\n", fileSize);
                 FILE* fptr = fopen(path, "wb");
                 if (fptr == NULL) {
@@ -219,7 +223,7 @@ char* processCommand(command cmd){
                         return message;
                 }
                 bzero(buf, sizeof(buf));
-                send(connectSock, "READY", MAXLINE, 0);
+                send(connectSock, "READY", 5, 0);
                 printf("Server ready to download\n");
                 while(totalReceived < fileSize) {
                         received = recv(connectSock, buf, MAXLINE, 0);
@@ -231,7 +235,7 @@ char* processCommand(command cmd){
                         }
                         fwrite(buf, 1, received, fptr);
                         bzero(buf, sizeof(buf));
-                        send(connectSock, "READY", MAXLINE, 0);
+                        send(connectSock, "READY", 5, 0);
                 }
                 fclose(fptr);
                 printf("File downloading successful\n");
@@ -248,7 +252,7 @@ char* processCommand(command cmd){
                 return message;
         }else if (strcmp(cmd.code, "DOWNLOAD") == 0) {
                 printf("DOWNLOAD request from user %s\n", currentUser.username);
-                char fileSizeStr[12];
+                char fileSizeStr[100];
                 char buf[MAXLINE];
                 int totalSent = 0;
                 int sent;
@@ -266,7 +270,9 @@ char* processCommand(command cmd){
                 printf("File size : %d byte(s)\n", fileSizeNo);
                 send(connectSock, fileSizeStr, strlen(fileSizeStr), 0);
                 while(strcmp(buf, "READY") != 0) {
-                        recv(connectSock, buf, MAXLINE, 0);
+                        bzero(buf, sizeof(buf));
+                        int n = recv(connectSock, buf, MAXLINE, 0);
+                        buf[n] = '\0';
                 }
                 printf("Client is ready. Begin uploading...\n");
                 while(totalSent < fileSizeNo) {
@@ -276,7 +282,9 @@ char* processCommand(command cmd){
                         printf("Sent: %d byte(s)\tTotal: %d byte(s)\tRemaining: %d\n", sent, totalSent, fileSizeNo - totalSent);
                         bzero(buf, sizeof(buf));
                         while(strcmp(buf, "READY") != 0) {
-                                recv(connectSock, buf, MAXLINE, 0);
+                                bzero(buf, sizeof(buf));
+                                int n = recv(connectSock, buf, MAXLINE, 0);
+                                buf[n] = '\0';
                         }
                         bzero(buf, sizeof(buf));
                 }
@@ -372,7 +380,7 @@ char* processCommand(command cmd){
                 } else {
                         strcpy(message,"201|");
                         int i=1;
-                        char numString[2];
+                        char numString[100];
                         while ((row = mysql_fetch_row(result))) {
                                 sprintf(numString, "%d.", i);
                                 strcat(message,numString);
@@ -404,7 +412,7 @@ char* processCommand(command cmd){
                                 return message;
                         } else{
                                 printf("DOWNLOADBYPATH request from user %s\n", currentUser.username);
-                                char fileSizeStr[12];
+                                char fileSizeStr[100];
                                 char buf[MAXLINE];
                                 int totalSent = 0;
                                 int sent;
@@ -422,7 +430,9 @@ char* processCommand(command cmd){
                                 printf("File size : %d byte(s)\n", fileSizeNo);
                                 send(connectSock, fileSizeStr, strlen(fileSizeStr), 0);
                                 while(strcmp(buf, "READY") != 0) {
-                                        recv(connectSock, buf, MAXLINE, 0);
+                                        bzero(buf, sizeof(buf));
+                                        int n = recv(connectSock, buf, MAXLINE, 0);
+                                        buf[n] = '\0';
                                 }
                                 printf("Client is ready. Begin uploading...\n");
                                 while(totalSent < fileSizeNo) {
@@ -432,7 +442,9 @@ char* processCommand(command cmd){
                                         printf("Sent: %d byte(s)\tTotal: %d byte(s)\tRemaining: %d\n", sent, totalSent, fileSizeNo - totalSent);
                                         bzero(buf, sizeof(buf));
                                         while(strcmp(buf, "READY") != 0) {
-                                                recv(connectSock, buf, MAXLINE, 0);
+                                                bzero(buf, sizeof(buf));
+                                                int n = recv(connectSock, buf, MAXLINE, 0);
+                                                buf[n] = '\0';
                                         }
                                         bzero(buf, sizeof(buf));
                                 }
