@@ -14,11 +14,10 @@ typedef struct {
 } command;
 
 
-#define MAXLINE 4096
+#define MAXLINE 1024
 #define SERV_PORT 3000
 
 int sockfd;
-char serverResponse[MAXLINE];
 command cmd;
 char username[30];
 char currentPath[256];
@@ -50,16 +49,21 @@ char* getFileName(const char *filename) {
         return dot + 1;
 }
 
-int main(){
+int main(int argc, char **argv){
         sockfd = socket(AF_INET,SOCK_STREAM,0);
         struct sockaddr_in serverAddr;
 
+        if (argv[1]==NULL){
+          printf("Error: Server address is missing\n");
+          exit(1);
+        }
+
         serverAddr.sin_family = AF_INET;
         serverAddr.sin_port = htons(SERV_PORT);
-        serverAddr.sin_addr.s_addr = INADDR_ANY;
+        serverAddr.sin_addr.s_addr = inet_addr(argv[1]);
 
         if(connect(sockfd,(struct sockaddr*)&serverAddr,sizeof(serverAddr))!= 0) {
-                printf("Loi: Ket noi den server that bai\n");
+                printf("Error: Error in connecting to server\n");
                 exit(1);
         }
         showMenuLogin();
@@ -246,6 +250,7 @@ void showMenuFunction(){
                         int totalSent = 0;
                         int sent;
                         int read;
+                        int n;
                         FILE *fptr;
                         printf("Enter file name or file path: ");
                         scanf("%s", fileNameOrPath);
@@ -268,7 +273,9 @@ void showMenuFunction(){
                         printf("File size : %d byte(s)\n", fileSizeNo);
                         send(sockfd, fileSizeStr, strlen(fileSizeStr), 0);
                         while(strcmp(buf, "READY") != 0) {
-                                recv(sockfd, buf, MAXLINE, 0);
+                                bzero(buf, sizeof(buf));
+                                n = recv(sockfd, buf, MAXLINE, 0);
+                                buf[n] = '\0';
                         }
                         printf("Server is ready. Begin uploading...\n");
                         while(totalSent < fileSizeNo) {
@@ -278,7 +285,9 @@ void showMenuFunction(){
                                 printf("Sent: %d byte(s)\tTotal: %d byte(s)\tRemaining: %d\n", sent, totalSent, fileSizeNo - totalSent);
                                 bzero(buf, sizeof(buf));
                                 while(strcmp(buf, "READY") != 0) {
-                                        recv(sockfd, buf, MAXLINE, 0);
+                                        bzero(buf, sizeof(buf));
+                                        n = recv(sockfd, buf, MAXLINE, 0);
+                                        buf[n] = '\0';
                                 }
                                 bzero(buf, sizeof(buf));
                         }
@@ -309,7 +318,7 @@ void showMenuFunction(){
                         fileSize = atoi(buf);
                         printf("File size: %d byte(s)\n", fileSize);
                         bzero(buf, sizeof(buf));
-                        send(sockfd, "READY", MAXLINE, 0);
+                        send(sockfd, "READY", 5, 0);
                         printf("Client ready to download\n");
                         while(totalReceived < fileSize) {
                                 received = recv(sockfd, buf, MAXLINE, 0);
@@ -321,7 +330,7 @@ void showMenuFunction(){
                                 }
                                 fwrite(buf, 1, received, fptr);
                                 bzero(buf, sizeof(buf));
-                                send(sockfd, "READY", MAXLINE, 0);
+                                send(sockfd, "READY", 5, 0);
                         }
                         fclose(fptr);
                         printf("File downloading successful\n");
@@ -393,7 +402,7 @@ void showMenuFunction(){
                         fileSize = atoi(buf);
                         printf("File size: %d byte(s)\n", fileSize);
                         bzero(buf, sizeof(buf));
-                        send(sockfd, "READY", MAXLINE, 0);
+                        send(sockfd, "READY", 5, 0);
                         printf("Client ready to download\n");
                         while(totalReceived < fileSize) {
                                 received = recv(sockfd, buf, MAXLINE, 0);
@@ -405,7 +414,7 @@ void showMenuFunction(){
                                 }
                                 fwrite(buf, 1, received, fptr);
                                 bzero(buf, sizeof(buf));
-                                send(sockfd, "READY", MAXLINE, 0);
+                                send(sockfd, "READY", 5, 0);
                         }
                         fclose(fptr);
                         printf("File downloading successful\n");
@@ -434,10 +443,13 @@ void showMenuFunction(){
 }
 
 void getResponse(){
-        if (recv(sockfd, serverResponse, MAXLINE, 0) == 0) {
+        char serverResponse[MAXLINE];
+        int n = recv(sockfd, serverResponse, MAXLINE, 0);
+        if (n == 0) {
                 perror("The server terminated prematurely");
                 exit(4);
         }
+        serverResponse[n] = '\0';
         cmd = convertReponseToCommand(serverResponse);
 }
 
