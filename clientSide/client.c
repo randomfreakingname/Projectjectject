@@ -471,14 +471,19 @@ int makeFolderForm(char *messageHeader){
         if(strcmp(messageHeader,"DELETEFOLDER")==0) {
                 printf("Enter folder or filename: ");
                 gets(folderName);
-                printf("Are you sure?(Y/N):");
-                gets(isSure);
-                if (strcmp(isSure,"Y") == 0){
-                        makeCommand(command,messageHeader, folderName, currentPath);
-                        send (sockfd,command,sizeof(command),0);
-                        return 1;
+                if(strstr(currentContent, folderName) != NULL){
+                        printf("Are you sure?(Y/N):");
+                        gets(isSure);
+                        if (strcmp(isSure,"Y") == 0){
+                                makeCommand(command,messageHeader, folderName, currentPath);
+                                send (sockfd,command,sizeof(command),0);
+                                return 1;
+                        }
+                        return 0;
                 }
+                printf("%s\n","Not exist");
                 return 0;
+
         }
         printf("Enter folder name:\n");
         gets(folderName);
