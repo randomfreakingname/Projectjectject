@@ -35,6 +35,7 @@ void getResponse();
 void updateCurrentContent();
 command convertReponseToCommand(char *response);
 int sharePrivilege();
+int deletePrivilege();
 int getFileSize(FILE *f){
         int size;
         fseek(f, 0L, SEEK_END);
@@ -202,13 +203,14 @@ void showMenuFunction(){
                 printf("8. Search\n");
                 printf("9. Download file by path\n");
                 printf("10. Share privilege\n");
-                printf("11. Logout\n");
+                printf("11. Delete privilege\n");
+                printf("12. Logout\n");
                 printf("Your choice: ");
                 while (choice == 0) {
                         if(scanf("%d",&choice) < 1) {
                                 choice = 0;
                         }
-                        if(choice < 1 || choice > 11) {
+                        if(choice < 1 || choice > 12) {
                                 choice = 0;
                                 printf("Invalid choice!\n");
                                 printf("Enter again:");
@@ -429,14 +431,30 @@ void showMenuFunction(){
                                         printf("Can not share public file(s).\n");
                                 } else if (atoi(cmd.code) == 201) {
                                         printf("Shared privilege succesfully.\n");
+                                } else if (atoi(cmd.code) == 403) {
+                                        printf("This file is already shared with this user\n");
                                 }
                         }
                         break;
                 case 11:
+                        if(deletePrivilege()) {
+                                getResponse();
+                                if (atoi(cmd.code) == 401) {
+                                        printf("No such username.\n");
+                                } else if (atoi(cmd.code) == 402) {
+                                        printf("This is public file.\n");
+                                } else if (atoi(cmd.code) == 201) {
+                                        printf("Delete privilege succesfully.\n");
+                                } else if (atoi(cmd.code) == 403) {
+                                        printf("This file is not shared with this user\n");
+                                }
+                        }
+                        break;
+                case 12:
                         printf("Bye\n");
                         break;
                 }
-                if (choice == 11) {
+                if (choice == 12) {
                         break;
                 }
         }
@@ -542,6 +560,28 @@ int sharePrivilege() {
                 printf("Enter username:");
                 gets(enteredUserName);
                 makeCommand(command,"SHARE",filePath,enteredUserName);
+                send (sockfd,command,sizeof(command),0);
+                return 1;
+        } else {
+                printf("Not exist\n");
+                return 0;
+        }
+}
+
+
+
+int deletePrivilege() {
+        char enteredFileName[200];
+        char enteredUserName[200];
+        char filePath[256];
+        char command[200];
+        printf("Enter filename:");
+        gets(enteredFileName);
+        if(strstr(currentContent, enteredFileName) != NULL) {
+                sprintf(filePath, "%s/%s",currentPath,enteredFileName);
+                printf("Enter username:");
+                gets(enteredUserName);
+                makeCommand(command,"DELETESHARE",filePath,enteredUserName);
                 send (sockfd,command,sizeof(command),0);
                 return 1;
         } else {

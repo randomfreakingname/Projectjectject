@@ -156,7 +156,6 @@ char* processCommand(command cmd){
                 int i;
                 sprintf(query, "Select count(*),username,password,id FROM user WHERE username ='%s'",cmd.params[0]);
                 if (mysql_query(conn, query)) {
-
                         strcpy(message,"401|Cant connect to database");
                         return message;
                 }
@@ -194,7 +193,6 @@ char* processCommand(command cmd){
                 }
                 sprintf(query, "insert into user(username,password) values ('%s','%s')",cmd.params[0],cmd.params[1]);
                 if (mysql_query(conn, query)) {
-
                         strcpy(message,"401|Cant connect to database");
                         return message;
                 }
@@ -356,9 +354,7 @@ char* processCommand(command cmd){
 
 
                 sprintf(query, "Select public FROM file WHERE filename='%s' and path='%s/%s'",cmd.params[1],cmd.params[0],cmd.params[1]);
-                if (mysql_query(conn, query)) {
-                        ;
-                }
+                mysql_query(conn, query);
                 result = mysql_store_result(conn);
 
                 row = mysql_fetch_row(result);
@@ -371,9 +367,7 @@ char* processCommand(command cmd){
                 return message;
         }else if (strcmp(cmd.code, "SEARCH") == 0) {
                 sprintf(query, "select path from file left join privilege on file.id=privilege.fileId where (public=0 or owner=%d or userId=%d) and filename='%s'",currentUser.id,currentUser.id,cmd.params[0]);
-                if (mysql_query(conn, query)) {
-                        return 0;
-                }
+                mysql_query(conn, query);
                 result = mysql_store_result(conn);
                 if(mysql_num_rows(result)==0) {
                         strcpy(message,"401|");
@@ -398,9 +392,7 @@ char* processCommand(command cmd){
                 return message;
         }else if (strcmp(cmd.code, "DOWNLOADBYPATH") == 0) {
                 sprintf(query, "select owner,public from file where path='%s'",cmd.params[0]);
-                if (mysql_query(conn, query)) {
-                        return 0;
-                }
+                mysql_query(conn, query);
                 result = mysql_store_result(conn);
                 if(mysql_num_rows(result)==0) {
                         strcpy(message,"401|");
@@ -463,10 +455,28 @@ char* processCommand(command cmd){
                         if (isFilePublic(cmd.params[0])) {
                                 strcpy(message,"402|");
                         } else {
-                                printf("(%d,%d)\n",getFileId(cmd.params[0]),getUserId(cmd.params[1]));
                                 sprintf(query, "insert into privilege(fileId,userId) values(%d,%d)",getFileId(cmd.params[0]),getUserId(cmd.params[1]));
                                 if (mysql_query(conn, query)) {
-                                        return 0;
+                                        strcpy(message,"403|");
+                                        return message;
+                                }
+                                strcpy(message,"201|");
+                        }
+                        return message;
+                } else {
+                        strcpy(message,"401|");
+                        return message;
+                }
+        }else if (strcmp(cmd.code, "DELETESHARE") == 0) {
+                if (isUserExisted(cmd.params[1]))
+                {
+                        if (isFilePublic(cmd.params[0])) {
+                                strcpy(message,"402|");
+                        } else {
+                                sprintf(query, "delete from privilege where fileId = '%d' and userId ='%d'",getFileId(cmd.params[0]),getUserId(cmd.params[1]));
+                                if (mysql_query(conn, query)) {
+                                        strcpy(message,"403|");
+                                        return message;
                                 }
                                 strcpy(message,"201|");
                         }
@@ -484,10 +494,8 @@ int isUserExisted(char* username) {
         char query[1000];
         int i;
         sprintf(query, "Select count(*) FROM user WHERE username ='%s'",username);
-        if (mysql_query(conn, query)) {
+        mysql_query(conn, query);
 
-                return 0;
-        }
         result = mysql_store_result(conn);
         if(result == NULL) {
 
@@ -550,7 +558,6 @@ int deleteFolder(char *folderName){
         sprintf(query, "DELETE FROM file WHERE path like '%s%%'",folderName);
         if(system(command) == 0 ) {
                 if (mysql_query(conn, query)) {
-
                         return 0;
                 }
                 return 1;
@@ -565,7 +572,6 @@ int deleteFile(char *fileName){
         sprintf(query, "DELETE FROM file WHERE path ='%s'",fileName);
         if(system(command) == 0 ) {
                 if (mysql_query(conn, query)) {
-
                         return 0;
                 }
                 return 1;
@@ -607,7 +613,6 @@ int isFilePublic(char* filepath) {
         char query[1000];
         sprintf(query, "select public from file where path='%s'",filepath);
         if (mysql_query(conn, query)) {
-
                 return 0;
         }
         result = mysql_store_result(conn);
