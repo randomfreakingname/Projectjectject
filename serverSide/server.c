@@ -395,6 +395,16 @@ char* processCommand(command cmd){
                         strcat(message,"|");
                 }
                 return message;
+        }else if (strcmp(cmd.code, "DOWNLOADABLE") == 0) {
+                sprintf(query, "select path from file left join privilege on file.id=privilege.fileId where (public=0 or owner=%d or userId=%d) and path='%s'",currentUser.id,currentUser.id,cmd.params[0]);
+                mysql_query(conn, query);
+                result = mysql_store_result(conn);
+                if(mysql_num_rows(result)==0) {
+                        strcpy(message,"401|");
+                } else {
+                        strcpy(message,"201|");
+                }
+                return message;
         }else if (strcmp(cmd.code, "UPDATE") == 0) {
                 strcpy(message,"201|");
                 strcat(message,showContentFolder(cmd.params[0]));

@@ -408,7 +408,7 @@ void showMenuFunction(){
                           strcpy(fileName, filePath);
                         }
                         printf("Processed file name: %s\n", fileName);
-                        makeCommand(command,"SEARCH",fileName,NULL);
+                        makeCommand(command,"DOWNLOADABLE",filePath,NULL);
                         send (sockfd,command,sizeof(command),0);
                         getResponse();
                         if (atoi(cmd.code) != 201) {
