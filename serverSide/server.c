@@ -236,7 +236,12 @@ char* processCommand(command cmd){
                         send(connectSock, "READY", 5, 0);
                 }
                 fclose(fptr);
-                printf("File downloading successful\n");
+                if (totalReceived != fileSize){
+                  printf("File downloading unsuccessful\n");
+                }
+                else if (totalReceived == fileSize){
+                  printf("File downloading successful\n");
+                }
                 char* fileName=cmd.params[1];
                 int owner=currentUser.id;
                 char* currentPath=cmd.params[0];
@@ -287,7 +292,12 @@ char* processCommand(command cmd){
                         bzero(buf, sizeof(buf));
                 }
                 fclose(fptr);
-                printf("File uploading successful\n");
+                if (totalSent != fileSizeNo){
+                  printf("File uploading unsuccessful\n");
+                }
+                else if (totalSent == fileSizeNo){
+                  printf("File uploading successful\n");
+                }
                 bzero(cmd.code, sizeof(cmd.code));
                 bzero(cmd.params[0], sizeof(cmd.params[0]));
                 bzero(cmd.params[1], sizeof(cmd.params[1]));
@@ -441,7 +451,12 @@ char* processCommand(command cmd){
                                         bzero(buf, sizeof(buf));
                                 }
                                 fclose(fptr);
-                                printf("File uploading successful\n");
+                                if (totalSent != fileSizeNo){
+                                  printf("File uploading unsuccessful\n");
+                                }
+                                else if (totalSent == fileSizeNo){
+                                  printf("File uploading successful\n");
+                                }
                                 bzero(cmd.code, sizeof(cmd.code));
                                 bzero(cmd.params[0], sizeof(cmd.params[0]));
                                 bzero(cmd.params[1], sizeof(cmd.params[1]));

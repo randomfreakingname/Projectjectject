@@ -150,9 +150,9 @@ void makeCommand(char* command, char* code, char* param1, char* param2){
 void showSignupForm(){
         char password[30];
         char command[100];
-        printf("Username:\n");
+        printf("Username: ");
         gets(username);
-        printf("Password:\n");
+        printf("Password: ");
         gets(password);
         makeCommand(command,"SIGNUP", username, password);
         send (sockfd,command,sizeof(command),0);
@@ -227,7 +227,7 @@ void showMenuFunction(){
                                 strcpy(currentContent,cmd.params[0]);
                         }
                         else {
-                                printf("Error :%s\n",cmd.params[0]);
+                                printf("Error: %s\n",cmd.params[0]);
                         }
                         break;
                 case 2:
@@ -239,7 +239,7 @@ void showMenuFunction(){
                                 strcpy(currentPath, cmd.params[0]);
                         }
                         else {
-                                printf("Error :%s\n",cmd.params[0]);
+                                printf("Error: %s\n",cmd.params[0]);
                         }
                         break;
                 case 3: {
@@ -294,7 +294,12 @@ void showMenuFunction(){
                                 bzero(buf, sizeof(buf));
                         }
                         fclose(fptr);
-                        printf("File uploading successful\n");
+                        if (totalSent != fileSizeNo){
+                          printf("File uploading unsuccessful\n");
+                        }
+                        else if (totalSent == fileSizeNo){
+                          printf("File uploading successful\n");
+                        }
                         getResponse();
                 } break;
                 case 4: {
@@ -305,8 +310,13 @@ void showMenuFunction(){
                         char buf[MAXLINE];
                         char command[100];
                         char path[256];
+                        int n;
                         printf("Enter file name: ");
                         scanf("%s", fileName);
+                        if(strstr(currentContent, fileName) == NULL) {
+                          printf("File not found\n");
+                          break;
+                        }
                         printf("File name: %s\n", fileName);
                         FILE* fptr = fopen(fileName, "wb");
                         if (fptr == NULL) {
@@ -335,7 +345,12 @@ void showMenuFunction(){
                                 send(sockfd, "READY", 5, 0);
                         }
                         fclose(fptr);
-                        printf("File downloading successful\n");
+                        if (totalReceived != fileSize){
+                          printf("File downloading unsuccessful\n");
+                        }
+                        else if (totalReceived == fileSize){
+                          printf("File downloading successful\n");
+                        }
                         getResponse();
                 } break;
                 case 5:
@@ -352,11 +367,11 @@ void showMenuFunction(){
                         if(makeFolderForm("DELETEFOLDER")==1){
                                 getResponse();
                                 if (atoi(cmd.code) == 201) {
-                                        printf("Delele successfully\n");
+                                        printf("Delete successfully\n");
                                         strcpy(currentContent,cmd.params[0]);
                                 }
                                 else {
-                                        printf("Error:%s\n",cmd.params[0]);
+                                        printf("Error: %s\n",cmd.params[0]);
                                 }
                         }
                         break;
@@ -393,6 +408,13 @@ void showMenuFunction(){
                           strcpy(fileName, filePath);
                         }
                         printf("Processed file name: %s\n", fileName);
+                        makeCommand(command,"SEARCH",fileName,NULL);
+                        send (sockfd,command,sizeof(command),0);
+                        getResponse();
+                        if (atoi(cmd.code) != 201) {
+                                printf("Error: No such file or unauthorized\n");
+                                break;
+                        }
                         FILE* fptr = fopen(fileName, "wb");
                         if (fptr == NULL) {
                                 perror("Can't open file");
@@ -419,7 +441,12 @@ void showMenuFunction(){
                                 send(sockfd, "READY", 5, 0);
                         }
                         fclose(fptr);
-                        printf("File downloading successful\n");
+                        if (totalReceived != fileSize){
+                          printf("File downloading unsuccessful\n");
+                        }
+                        else if (totalReceived == fileSize){
+                          printf("File downloading successful\n");
+                        }
                         getResponse();
                 } break;
                 case 10:
@@ -490,7 +517,7 @@ int makeFolderForm(char *messageHeader){
                 printf("Enter folder or filename: ");
                 gets(folderName);
                 if(strstr(currentContent, folderName) != NULL){
-                        printf("Are you sure?(Y/N):");
+                        printf("Are you sure?(Y/N): ");
                         gets(isSure);
                         if (strcmp(isSure,"Y") == 0){
                                 makeCommand(command,messageHeader, folderName, currentPath);
@@ -503,7 +530,7 @@ int makeFolderForm(char *messageHeader){
                 return 0;
 
         }
-        printf("Enter folder name:\n");
+        printf("Enter folder name: ");
         gets(folderName);
         makeCommand(command,messageHeader, folderName, currentPath);
         send (sockfd,command,sizeof(command),0);
@@ -529,7 +556,7 @@ int togglePrivacy() {
 void searchAccessableFiles() {
         char enteredFileName[200];
         char command[200];
-        printf("Enter filename:");
+        printf("Enter filename: ");
         gets(enteredFileName);
         makeCommand(command,"SEARCH",enteredFileName,NULL);
         send (sockfd,command,sizeof(command),0);
@@ -544,7 +571,7 @@ void updateCurrentContent(){
                 strcpy(currentContent,cmd.params[0]);
         }
         else {
-                printf("Error :%s\n",cmd.params[0]);
+                printf("Error: %s\n",cmd.params[0]);
         }
 }
 
@@ -553,11 +580,11 @@ int sharePrivilege() {
         char enteredUserName[200];
         char filePath[256];
         char command[200];
-        printf("Enter filename:");
+        printf("Enter filename: ");
         gets(enteredFileName);
         if(strstr(currentContent, enteredFileName) != NULL) {
                 sprintf(filePath, "%s/%s",currentPath,enteredFileName);
-                printf("Enter username:");
+                printf("Enter username: ");
                 gets(enteredUserName);
                 makeCommand(command,"SHARE",filePath,enteredUserName);
                 send (sockfd,command,sizeof(command),0);
@@ -575,11 +602,11 @@ int deletePrivilege() {
         char enteredUserName[200];
         char filePath[256];
         char command[200];
-        printf("Enter filename:");
+        printf("Enter filename: ");
         gets(enteredFileName);
         if(strstr(currentContent, enteredFileName) != NULL) {
                 sprintf(filePath, "%s/%s",currentPath,enteredFileName);
-                printf("Enter username:");
+                printf("Enter username: ");
                 gets(enteredUserName);
                 makeCommand(command,"DELETESHARE",filePath,enteredUserName);
                 send (sockfd,command,sizeof(command),0);
