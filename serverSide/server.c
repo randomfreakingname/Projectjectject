@@ -39,7 +39,7 @@ typedef struct {
 
 typedef struct {
         char code[100];
-        char params[2][100];
+        char params[2][256];
 } command;
 
 User currentUser;
@@ -156,18 +156,18 @@ char* processCommand(command cmd){
                 int i;
                 sprintf(query, "Select count(*),username,password,id FROM user WHERE username ='%s'",cmd.params[0]);
                 if (mysql_query(conn, query)) {
-                        strcpy(message,"401|Cant connect to database");
+                        strcpy(message,"401|Cant connect to database|");
                         return message;
                 }
                 result = mysql_store_result(conn);
                 if(result == NULL) {
 
-                        strcpy(message,"401|Cant execute query");
+                        strcpy(message,"401|Cant execute query|");
                         return message;
                 }
                 row = mysql_fetch_row(result);
                 if (atoi(row[0])<1) {
-                        strcpy(message,"401|Cant find username");
+                        strcpy(message,"401|Cant find username|");
                 } else {
                         if (strcmp(cmd.params[1],row[2])==0)
                         {
@@ -181,19 +181,19 @@ char* processCommand(command cmd){
                                 strcat(message,showContentFolder(temp));
                                 strcat(message,"|");
                         } else {
-                                strcpy(message,"401|Wrong password");
+                                strcpy(message,"401|Wrong password|");
                         }
                 }
                 return message;
         }
         else if(strcmp(cmd.code,"SIGNUP") == 0) {
                 if (isUserExisted(cmd.params[0])==1) {
-                        strcpy(message,"401|username is already existed");
+                        strcpy(message,"401|username is already existed|");
                         return message;
                 }
                 sprintf(query, "insert into user(username,password) values ('%s','%s')",cmd.params[0],cmd.params[1]);
                 if (mysql_query(conn, query)) {
-                        strcpy(message,"401|Cant connect to database");
+                        strcpy(message,"401|Cant connect to database|");
                         return message;
                 }
                 strcpy(message,"200|");
@@ -302,7 +302,7 @@ char* processCommand(command cmd){
                         strcat(message,showContentFolder(cmd.params[1]));
                         strcat(message,"|");
                 }else{
-                        strcpy(message,"401|Invalid folder name");
+                        strcpy(message,"401|Invalid folder name|");
                 }
                 return message;
         }else if (strcmp(cmd.code, "DELETEFOLDER") == 0) {
@@ -320,7 +320,7 @@ char* processCommand(command cmd){
                         strcat(message,showContentFolder(cmd.params[1]));
                         strcat(message,"|");
                 }else{
-                        strcpy(message,"401|Not exist");
+                        strcpy(message,"401|Not exist|");
                 }
                 return message;
         }else if (strcmp(cmd.code, "ENTERFOLDER") == 0) {
@@ -335,7 +335,7 @@ char* processCommand(command cmd){
                         strcat(message,showContentFolder(newPath));
                         strcat(message,"|");
                 }else{
-                        strcpy(message,"401|Not a folder");
+                        strcpy(message,"401|Not a folder|");
                 }
                 return message;
         }
